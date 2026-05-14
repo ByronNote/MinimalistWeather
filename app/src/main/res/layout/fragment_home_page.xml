@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.baronzhang.android.weather.feature.home.HomePageFragment"
+    tools:context="com.byronzhang.android.weather.feature.home.HomePageFragment"
     tools:ignore="RtlHardcoded">
 
     <LinearLayout
@@ -28,7 +28,7 @@
                 android:layout_height="wrap_content"
                 android:descendantFocusability="blocksDescendants">
 
-                <com.baronzhang.android.widget.TitleView
+                <com.byronzhang.android.widget.TitleView
                     android:id="@+id/detail_title"
                     android:layout_width="match_parent"
                     android:layout_height="42dp"
@@ -61,7 +61,7 @@
                 android:layout_height="wrap_content"
                 android:descendantFocusability="blocksDescendants">
 
-                <com.baronzhang.android.widget.TitleView
+                <com.byronzhang.android.widget.TitleView
                     android:id="@+id/forecast_title"
                     android:layout_width="match_parent"
                     android:layout_height="42dp"
@@ -94,7 +94,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <com.baronzhang.android.widget.TitleView
+                <com.byronzhang.android.widget.TitleView
                     android:id="@+id/aqi_title"
                     android:layout_width="match_parent"
                     android:layout_height="42dp"
@@ -123,7 +123,7 @@
                     android:textSize="@dimen/text_size_headline"
                     tools:text="优" />
 
-                <com.baronzhang.android.widget.IndicatorView
+                <com.byronzhang.android.widget.IndicatorView
                     android:id="@+id/indicator_view_aqi"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -178,7 +178,7 @@
                 android:layout_height="wrap_content"
                 android:descendantFocusability="blocksDescendants">
 
-                <com.baronzhang.android.widget.TitleView
+                <com.byronzhang.android.widget.TitleView
                     android:id="@+id/index_title"
                     android:layout_width="match_parent"
                     android:layout_height="42dp"

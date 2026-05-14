@@ -1,12 +1,11 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion rootProject.ext.android.compileSdkVersion
+    namespace "com.byronzhang.android.library"
+    compileSdk rootProject.ext.android.compileSdkVersion
     defaultConfig {
-        minSdkVersion rootProject.ext.android.minSdkVersion
-        targetSdkVersion rootProject.ext.android.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        minSdk rootProject.ext.android.minSdkVersion
+        targetSdk rootProject.ext.android.targetSdkVersion
     }
     buildTypes {
         release {
@@ -20,16 +19,12 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    lintOptions {
-        abortOnError false
-    }
-
-    publishNonDefault true
+    lint { abortOnError false }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.2'
     api rootProject.ext.dependencies["support-v4"]
     api rootProject.ext.dependencies["appcompat-v7"]
     api rootProject.ext.dependencies["design"]
@@ -46,6 +41,7 @@ dependencies {
     api rootProject.ext.dependencies["retrofit"]
     api rootProject.ext.dependencies["adapter-rxjava"]
     api rootProject.ext.dependencies["fastjson"]
+    api rootProject.ext.dependencies["okhttp"]
     api rootProject.ext.dependencies["okhttp3-logging-interceptor"]
 
     debugApi rootProject.ext.dependencies["stetho"]
@@ -54,5 +50,5 @@ dependencies {
     api rootProject.ext.dependencies["SmartRefreshLayout"]
     api rootProject.ext.dependencies["SmartRefreshHeader"]
 
-    api 'org.glassfish:javax.annotation:10.0-b28'
+    api 'javax.annotation:javax.annotation-api:1.3.2'
 }

@@ -44,7 +44,7 @@
 **App Module包结构**
 
 ```Java
--com.baronzhang.android.weather
+-com.byronzhang.android.weather
     + base	  // MVP 各组件的基类及相关基础类
     + data    // MVP 中所有 Model 层的数据处理都在这里
     - feature       // 业务 feature，feature 内按页面划分，如果是大型项目可以按业务模块划分，对于特大型项目建议走模块化（组件化）方案，每个业务模块再按照 MinimalistWeather 的分包规则来分包
@@ -62,7 +62,7 @@
 
 **欢迎扫码关注公众号交流**
 
-<div align="center"><img src="http://resources.baronzhang.com/blog/common/gzh3.png" width="80%"/></div>
+<div align="center"><img src="http://resources.byronzhang.com/blog/common/gzh3.png" width="80%"/></div>
 
 ## 三. 开源许可 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
@@ -81,4 +81,3 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
-

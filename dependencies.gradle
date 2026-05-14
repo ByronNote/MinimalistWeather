@@ -1,19 +1,20 @@
 //def supportVersion = "28.0.0"
 def rxBindingVersion = "0.4.0"
 def retrofitVersion = "2.5.0"
-def okHttpVersion = "3.14.0"
+def okHttpVersion = "3.12.13"
 def stethoVersion = "1.5.0"
 def butterKnifeVersion = "10.1.0"
-def daggerVersion = "2.8"
+def daggerVersion = "2.51.1"
 def ormLiteVersion = "4.48"
 def fastJsonVersion = "1.1.60.android"
+def smartRefreshVersion = "2.0.6"
 
 project.ext {
     android = [
-            compileSdkVersion: 28,
-            applicationId    : "com.baronzhang.android.weather",
+            compileSdkVersion: 34,
+            applicationId    : "com.byronzhang.android.weather",
             minSdkVersion    : 19,
-            targetSdkVersion : 28,
+            targetSdkVersion : 34,
             versionCode      : 1,
             versionName      : "1.0"
     ]
@@ -56,13 +57,14 @@ project.ext {
             "stetho-okhttp3"              : "com.facebook.stetho:stetho-okhttp3:${stethoVersion}",
 
             //others
+            "okhttp"                      : "com.squareup.okhttp3:okhttp:${okHttpVersion}",
             "okhttp3-logging-interceptor" : "com.squareup.okhttp3:logging-interceptor:${okHttpVersion}",
             "ormlite-android"             : "com.j256.ormlite:ormlite-android:${ormLiteVersion}",
             "fastjson"                    : "com.alibaba:fastjson:${fastJsonVersion}",
             "butterknife"                 : "com.jakewharton:butterknife:${butterKnifeVersion}",
             "butterknife-compiler"        : "com.jakewharton:butterknife-compiler:${butterKnifeVersion}",
             "retrofit2-fastjson-converter": "com.github.BaronZ88:Retrofit2-FastJson-Converter:1.2",
-            "SmartRefreshLayout"          : "com.scwang.smartrefresh:SmartRefreshLayout:1.0.3",
-            "SmartRefreshHeader"          : "com.scwang.smartrefresh:SmartRefreshHeader:1.0.3"
+            "SmartRefreshLayout"          : "io.github.scwang90:refresh-layout-kernel:${smartRefreshVersion}",
+            "SmartRefreshHeader"          : "io.github.scwang90:refresh-header-classics:${smartRefreshVersion}"
     ]
 }

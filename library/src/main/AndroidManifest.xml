@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.baronzhang.android.library">
+    package="com.byronzhang.android.library">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <application
         android:allowBackup="true"
         android:label="@string/app_name"
         android:supportsRtl="true">
-        <activity android:name="com.baronzhang.android.weather.base.BaseActivity"/>
+        <activity android:name="com.byronzhang.android.weather.base.BaseActivity"/>
     </application>
 
 </manifest>

@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">天气</string>
     <string name="author_mail">baron.zhanglei@gmail.com</string>
-    <string name="author_site">http://baronzhang.com</string>
+    <string name="author_site">http://byronzhang.com</string>
     <string name="title_activity_select_city">城市选择</string>
     <string name="title_activity_city_manager">城市管理</string>
     <string name="title_activity_fabric_test">@string/action_fabric_test</string>

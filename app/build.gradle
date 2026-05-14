@@ -1,17 +1,18 @@
 apply plugin: 'com.android.application'
 
 android {
+    namespace rootProject.ext.android.applicationId
+    compileSdk rootProject.ext.android.compileSdkVersion
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    compileSdkVersion rootProject.ext.android.compileSdkVersion
     defaultConfig {
         applicationId rootProject.ext.android.applicationId
-        minSdkVersion rootProject.ext.android.minSdkVersion
-        targetSdkVersion rootProject.ext.android.targetSdkVersion
+        minSdk rootProject.ext.android.minSdkVersion
+        targetSdk rootProject.ext.android.targetSdkVersion
         versionCode rootProject.ext.android.versionCode
         versionName rootProject.ext.android.versionName
 
@@ -20,28 +21,31 @@ android {
     buildTypes {
         debug {
             buildConfigField("boolean", "LOG_DEBUG", "true")
-            buildConfigField 'com.baronzhang.android.weather.util.StethoHelper', 'STETHO', 'new com.baronzhang.android.weather.DebugStethoHelper()'
+            buildConfigField 'com.byronzhang.android.weather.util.StethoHelper', 'STETHO', 'new com.byronzhang.android.weather.DebugStethoHelper()'
         }
 
         release {
             buildConfigField("boolean", "LOG_DEBUG", "false")
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            buildConfigField 'com.baronzhang.android.weather.util.StethoHelper', 'STETHO', 'new com.baronzhang.android.weather.util.stetho.ReleaseStethoHelper()'
+            buildConfigField 'com.byronzhang.android.weather.util.StethoHelper', 'STETHO', 'new com.byronzhang.android.weather.util.stetho.ReleaseStethoHelper()'
         }
     }
 
-    lintOptions {
-        abortOnError false
-    }
+    lint { abortOnError false }
+
+    buildFeatures { buildConfig true }
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.2'
 
     implementation project(':library')
     implementation project(':widget')
+
+    implementation rootProject.ext.dependencies["SmartRefreshLayout"]
+    implementation rootProject.ext.dependencies["SmartRefreshHeader"]
 
     implementation rootProject.ext.dependencies["butterknife"]
     annotationProcessor rootProject.ext.dependencies["butterknife-compiler"]
