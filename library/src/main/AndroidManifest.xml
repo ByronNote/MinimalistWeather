@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.byronzhang.android.library">
+    package="cn.byronlab.weather.library">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <application
         android:allowBackup="true"
         android:label="@string/app_name"
-        android:supportsRtl="true">
-        <activity android:name="com.byronzhang.android.weather.base.BaseActivity"/>
-    </application>
+        android:supportsRtl="true" />
 
 </manifest>

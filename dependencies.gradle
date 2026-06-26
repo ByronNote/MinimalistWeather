@@ -12,7 +12,7 @@ def smartRefreshVersion = "2.0.6"
 project.ext {
     android = [
             compileSdkVersion: 34,
-            applicationId    : "com.byronzhang.android.weather",
+            applicationId    : "cn.byronlab.weather",
             minSdkVersion    : 19,
             targetSdkVersion : 34,
             versionCode      : 1,

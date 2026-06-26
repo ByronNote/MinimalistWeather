@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="com.byronzhang.android.weather.feature.selectcity.SelectCityFragment">
+    tools:context="cn.byronlab.weather.feature.selectcity.SelectCityFragment">
 
 
     <androidx.recyclerview.widget.RecyclerView

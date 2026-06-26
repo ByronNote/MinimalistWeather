@@ -16,7 +16,7 @@
 #   public *;
 #}
 
--keep public class * extends com.byronzhang.android.weather.util.StethoHelper
+-keep public class * extends cn.byronlab.weather.util.StethoHelper
 
 # Retrofit
 -dontwarn okio.**

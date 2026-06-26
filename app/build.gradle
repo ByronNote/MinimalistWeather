@@ -21,14 +21,14 @@ android {
     buildTypes {
         debug {
             buildConfigField("boolean", "LOG_DEBUG", "true")
-            buildConfigField 'com.byronzhang.android.weather.util.StethoHelper', 'STETHO', 'new com.byronzhang.android.weather.DebugStethoHelper()'
+            buildConfigField 'cn.byronlab.weather.util.StethoHelper', 'STETHO', 'new cn.byronlab.weather.DebugStethoHelper()'
         }
 
         release {
             buildConfigField("boolean", "LOG_DEBUG", "false")
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            buildConfigField 'com.byronzhang.android.weather.util.StethoHelper', 'STETHO', 'new com.byronzhang.android.weather.util.stetho.ReleaseStethoHelper()'
+            buildConfigField 'cn.byronlab.weather.util.StethoHelper', 'STETHO', 'new cn.byronlab.weather.util.stetho.ReleaseStethoHelper()'
         }
     }
 

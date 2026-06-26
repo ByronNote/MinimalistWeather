@@ -44,7 +44,7 @@
 **App Module包结构**
 
 ```Java
--com.byronzhang.android.weather
+-cn.byronlab.weather
     + base	  // MVP 各组件的基类及相关基础类
     + data    // MVP 中所有 Model 层的数据处理都在这里
     - feature       // 业务 feature，feature 内按页面划分，如果是大型项目可以按业务模块划分，对于特大型项目建议走模块化（组件化）方案，每个业务模块再按照 MinimalistWeather 的分包规则来分包
