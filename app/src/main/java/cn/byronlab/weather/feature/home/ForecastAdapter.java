@@ -41,13 +41,13 @@ public class ForecastAdapter extends BaseRecyclerViewAdapter<ForecastAdapter.Vie
     @Override
     public void onBindViewHolder(ForecastAdapter.ViewHolder holder, int position) {
         WeatherForecast weatherForecast = weatherForecasts.get(position);
-        holder.weekTextView.setText(weatherForecast.getWeek());
-        holder.dateTextView.setText(weatherForecast.getDate());
+        holder.weekTextView.setText(safeString(weatherForecast.getWeek()));
+        holder.dateTextView.setText(safeString(weatherForecast.getDate()));
         holder.weatherIconImageView.setImageResource(R.mipmap.ic_launcher);
         holder.weatherTextView.setText(TextUtils.isEmpty(weatherForecast.getWeather()) ?
-                (weatherForecast.getWeatherDay().equals(weatherForecast.getWeatherNight()) ?
-                        weatherForecast.getWeatherDay() : weatherForecast.getWeatherDay() + "转" + weatherForecast.getWeatherNight())
-                : weatherForecast.getWeather());
+                (safeString(weatherForecast.getWeatherDay()).equals(safeString(weatherForecast.getWeatherNight())) ?
+                        safeString(weatherForecast.getWeatherDay()) : safeString(weatherForecast.getWeatherDay()) + "转" + safeString(weatherForecast.getWeatherNight()))
+                : safeString(weatherForecast.getWeather()));
         holder.tempMaxTextView.setText(weatherForecast.getTempMax() + "°");
         holder.tempMinTextView.setText(weatherForecast.getTempMin() + "°");
     }
@@ -55,6 +55,10 @@ public class ForecastAdapter extends BaseRecyclerViewAdapter<ForecastAdapter.Vie
     @Override
     public int getItemCount() {
         return weatherForecasts == null ? 0 : weatherForecasts.size();
+    }
+
+    private String safeString(String value) {
+        return value == null ? "" : value;
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

@@ -20,6 +20,7 @@ import cn.byronlab.weather.data.db.entities.minimalist.AirQualityLive;
 import cn.byronlab.weather.data.db.entities.minimalist.WeatherForecast;
 import cn.byronlab.weather.data.db.entities.minimalist.LifeIndex;
 import cn.byronlab.weather.data.db.entities.minimalist.Weather;
+import cn.byronlab.weather.data.db.entities.minimalist.WeatherLive;
 import cn.byronlab.weather.data.WeatherDetail;
 import cn.byronlab.weather.widget.IndicatorView;
 
@@ -129,10 +130,11 @@ public class HomePageFragment extends BaseFragment implements HomePageContract.V
 
         aqiIndicatorView.setIndicatorValueChangeListener((currentIndicatorValue, stateDescription, indicatorTextColor) -> {
             aqiTextView.setText(String.valueOf(currentIndicatorValue));
-            if (TextUtils.isEmpty(weather.getAirQualityLive().getQuality())) {
+            AirQualityLive airQualityLive = weather == null ? null : weather.getAirQualityLive();
+            if (airQualityLive == null || TextUtils.isEmpty(airQualityLive.getQuality())) {
                 qualityTextView.setText(stateDescription);
             } else {
-                qualityTextView.setText(weather.getAirQualityLive().getQuality());
+                qualityTextView.setText(airQualityLive.getQuality());
             }
             aqiTextView.setTextColor(indicatorTextColor);
             qualityTextView.setTextColor(indicatorTextColor);
@@ -156,21 +158,25 @@ public class HomePageFragment extends BaseFragment implements HomePageContract.V
         onFragmentInteractionListener.updatePageTitle(weather);
 
         AirQualityLive airQualityLive = weather.getAirQualityLive();
-        aqiIndicatorView.setIndicatorValue(airQualityLive.getAqi());
-        adviceTextView.setText(airQualityLive.getAdvice());
-        String rank = airQualityLive.getCityRank();
-        cityRankTextView.setText(TextUtils.isEmpty(rank) ? "首要污染物: " + airQualityLive.getPrimary() : rank);
+        aqiIndicatorView.setIndicatorValue(airQualityLive == null ? 0 : airQualityLive.getAqi());
+        adviceTextView.setText(airQualityLive == null ? "" : airQualityLive.getAdvice());
+        String rank = airQualityLive == null ? "" : airQualityLive.getCityRank();
+        cityRankTextView.setText(TextUtils.isEmpty(rank) ? "首要污染物: " + (airQualityLive == null ? "" : airQualityLive.getPrimary()) : rank);
 
         weatherDetails.clear();
         weatherDetails.addAll(createDetails(weather));
         detailAdapter.notifyDataSetChanged();
 
         weatherForecasts.clear();
-        weatherForecasts.addAll(weather.getWeatherForecasts());
+        if (weather.getWeatherForecasts() != null) {
+            weatherForecasts.addAll(weather.getWeatherForecasts());
+        }
         forecastAdapter.notifyDataSetChanged();
 
         lifeIndices.clear();
-        lifeIndices.addAll(weather.getLifeIndexes());
+        if (weather.getLifeIndexes() != null) {
+            lifeIndices.addAll(weather.getLifeIndexes());
+        }
         lifeIndexAdapter.notifyDataSetChanged();
 
         onFragmentInteractionListener.addOrUpdateCityListInDrawerMenu(weather);
@@ -179,14 +185,27 @@ public class HomePageFragment extends BaseFragment implements HomePageContract.V
     private List<WeatherDetail> createDetails(Weather weather) {
 
         List<WeatherDetail> details = new ArrayList<>();
-        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "体感温度", weather.getWeatherLive().getFeelsTemperature() + "°C"));
-        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "湿度", weather.getWeatherLive().getHumidity() + "%"));
+        WeatherLive weatherLive = weather.getWeatherLive();
+        WeatherForecast forecast = firstForecast(weather);
+        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "体感温度", safeString(weatherLive == null ? null : weatherLive.getFeelsTemperature()) + "°C"));
+        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "湿度", safeString(weatherLive == null ? null : weatherLive.getHumidity()) + "%"));
 //        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "气压", (int) Double.parseDouble(weather.getWeatherLive().getAirPressure()) + "hPa"));
-        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "紫外线指数", weather.getWeatherForecasts().get(0).getUv()));
-        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "降水量", weather.getWeatherLive().getRain() + "mm"));
-        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "降水概率", weather.getWeatherForecasts().get(0).getPop() + "%"));
-        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "能见度", weather.getWeatherForecasts().get(0).getVisibility() + "km"));
+        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "紫外线指数", safeString(forecast == null ? null : forecast.getUv())));
+        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "降水量", safeString(weatherLive == null ? null : weatherLive.getRain()) + "mm"));
+        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "降水概率", safeString(forecast == null ? null : forecast.getPop()) + "%"));
+        details.add(new WeatherDetail(R.drawable.ic_index_sunscreen, "能见度", safeString(forecast == null ? null : forecast.getVisibility()) + "km"));
         return details;
+    }
+
+    private WeatherForecast firstForecast(Weather weather) {
+        if (weather == null || weather.getWeatherForecasts() == null || weather.getWeatherForecasts().isEmpty()) {
+            return null;
+        }
+        return weather.getWeatherForecasts().get(0);
+    }
+
+    private String safeString(String value) {
+        return value == null ? "" : value;
     }
 
     @Override

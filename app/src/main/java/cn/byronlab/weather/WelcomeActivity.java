@@ -27,10 +27,16 @@ public class WelcomeActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         StatusBarHelper.statusBarLightMode(this);
 
-        Observable.just(initAppData())
+        Observable.fromCallable(() -> {
+                    initAppData();
+                    return true;
+                })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(result -> gotoMainPage());
+                .subscribe(result -> gotoMainPage(), throwable -> {
+                    throwable.printStackTrace();
+                    gotoMainPage();
+                });
 
     }
 
@@ -45,7 +51,7 @@ public class WelcomeActivity extends BaseActivity {
     /**
      * 初始化应用数据
      */
-    private String initAppData() {
+    private void initAppData() {
         PreferenceHelper.loadDefaults();
         //TODO 测试，待删除
         if (PreferenceHelper.getSharedPreferences().getBoolean(WeatherSettings.SETTINGS_FIRST_USE.getId(), false)) {
@@ -57,6 +63,5 @@ public class WelcomeActivity extends BaseActivity {
             }
         }
         CityDatabaseHelper.importCityDB();
-        return null;
     }
 }

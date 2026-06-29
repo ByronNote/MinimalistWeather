@@ -3,9 +3,13 @@ package cn.byronlab.weather.feature.selectcity;
 import android.content.Context;
 
 import cn.byronlab.weather.data.db.dao.CityDao;
+import cn.byronlab.weather.data.db.entities.City;
 import cn.byronlab.weather.di.component.DaggerPresenterComponent;
 import cn.byronlab.weather.di.module.ApplicationModule;
 import cn.byronlab.weather.di.scope.ActivityScoped;
+
+import java.util.Collections;
+import java.util.List;
 
 import javax.inject.Inject;
 
@@ -42,10 +46,13 @@ public final class SelectCityPresenter implements SelectCityContract.Presenter {
 
     @Override
     public void loadCities() {
-        Subscription subscription = Observable.just(cityDao.queryCityList())
+        Subscription subscription = Observable.fromCallable(() -> {
+                    List<City> cities = cityDao.queryCityList();
+                    return cities == null ? Collections.<City>emptyList() : cities;
+                })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(cityListView::displayCities);
+                .subscribe(cityListView::displayCities, Throwable::printStackTrace);
         subscriptions.add(subscription);
     }
 

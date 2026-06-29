@@ -31,9 +31,6 @@ android {
             buildConfigField 'cn.byronlab.weather.util.StethoHelper', 'STETHO', 'new cn.byronlab.weather.util.stetho.ReleaseStethoHelper()'
         }
     }
-
-    lint { abortOnError false }
-
     buildFeatures { buildConfig true }
 }
 
@@ -43,6 +40,7 @@ dependencies {
 
     implementation project(':library')
     implementation project(':widget')
+    implementation project(':domain')
 
     implementation rootProject.ext.dependencies["SmartRefreshLayout"]
     implementation rootProject.ext.dependencies["SmartRefreshHeader"]

@@ -127,6 +127,9 @@ public class DrawerMenuFragment extends BaseFragment implements DrawerContract.V
 
     @Override
     public void displaySavedCities(List<Weather> weatherList) {
+        if (weatherList == null) {
+            return;
+        }
         this.weatherList.clear();
         this.weatherList.addAll(weatherList);
         cityManagerAdapter.notifyDataSetChanged();

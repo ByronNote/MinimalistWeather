@@ -24,15 +24,8 @@ public final class DateConvertUtils {
      */
     public static long dateToTimeStamp(String data, String dataFormatPatten) {
 
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dataFormatPatten, Locale.CHINA);
-        Date date = null;
-        try {
-            date = simpleDateFormat.parse(data);
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-        assert date != null;
-        return date.getTime();
+        Date date = parseDate(data, dataFormatPatten);
+        return date == null ? 0L : date.getTime();
     }
 
     /**
@@ -56,12 +49,9 @@ public final class DateConvertUtils {
      */
     public static String convertDataToWeek(String dateString) {
 
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATA_FORMAT_PATTEN_YYYY_MM_DD, Locale.CHINA);
-        Date date = null;
-        try {
-            date = simpleDateFormat.parse(dateString);
-        } catch (ParseException e) {
-            e.printStackTrace();
+        Date date = parseDate(dateString, DATA_FORMAT_PATTEN_YYYY_MM_DD);
+        if (date == null) {
+            return "";
         }
         if (isNow(date))
             return "今天";
@@ -80,17 +70,14 @@ public final class DateConvertUtils {
      */
     public static String convertDataToString(String dateString) {
 
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATA_FORMAT_PATTEN_YYYY_MM_DD, Locale.CHINA);
-        Date date = null;
-        try {
-            date = simpleDateFormat.parse(dateString);
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
+        Date date = parseDate(dateString, DATA_FORMAT_PATTEN_YYYY_MM_DD);
         if (date == null)
             return "";
-        return (String.valueOf(date.getMonth()).length() == 1 ? "0" + date.getMonth() : String.valueOf(date.getMonth()))
-                + "." + (String.valueOf(date.getDay()).length() == 1 ? "0" + date.getDay() : String.valueOf(date.getDay()));
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        int month = calendar.get(Calendar.MONTH) + 1;
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+        return String.format(Locale.CHINA, "%02d.%02d", month, day);
     }
 
     /**
@@ -99,6 +86,9 @@ public final class DateConvertUtils {
      * @return 是返回true，不是返回false
      */
     private static boolean isNow(Date date) {
+        if (date == null) {
+            return false;
+        }
         //当前时间
         Date now = new Date();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATA_FORMAT_PATTEN_YYYY_MM_DD, Locale.CHINA);
@@ -107,6 +97,19 @@ public final class DateConvertUtils {
         //对比的时间
         String day = simpleDateFormat.format(date);
         return day.equals(nowDay);
+    }
+
+    private static Date parseDate(String data, String dataFormatPatten) {
+        if (data == null || data.trim().isEmpty() || dataFormatPatten == null || dataFormatPatten.trim().isEmpty()) {
+            return null;
+        }
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dataFormatPatten, Locale.CHINA);
+        try {
+            return simpleDateFormat.parse(data);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
 }

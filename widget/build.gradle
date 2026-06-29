@@ -1,7 +1,7 @@
 apply plugin: 'com.android.library'
 
 android {
-    namespace "com.byronzhang.android.widget"
+    namespace "cn.byronlab.weather.widget"
     compileSdk rootProject.ext.android.compileSdkVersion
 
     defaultConfig {

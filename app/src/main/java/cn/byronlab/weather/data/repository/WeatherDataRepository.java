@@ -40,7 +40,7 @@ public class WeatherDataRepository {
         });
 
         if (!NetworkUtils.isNetworkConnected(context))
-            return observableForGetWeatherFromDB;
+            return filterUsableWeather(observableForGetWeatherFromDB);
 
         //从服务端获取天气数据
         Observable<Weather> observableForGetWeatherFromNetWork = null;
@@ -60,7 +60,9 @@ public class WeatherDataRepository {
 
                 break;
         }
-        assert observableForGetWeatherFromNetWork != null;
+        if (observableForGetWeatherFromNetWork == null) {
+            return filterUsableWeather(observableForGetWeatherFromDB);
+        }
         observableForGetWeatherFromNetWork = observableForGetWeatherFromNetWork.doOnNext(weather -> Schedulers.io().createWorker().schedule(() -> {
             try {
                 weatherDao.insertOrUpdateWeather(weather);
@@ -70,8 +72,16 @@ public class WeatherDataRepository {
         }));
 
         return Observable.concat(observableForGetWeatherFromDB, observableForGetWeatherFromNetWork)
-                .filter(weather -> weather != null && !TextUtils.isEmpty(weather.getCityId()))
+                .filter(WeatherDataRepository::isUsableWeather)
                 .distinct(weather -> weather.getWeatherLive().getTime())
                 .takeUntil(weather -> !refreshNow && System.currentTimeMillis() - weather.getWeatherLive().getTime() <= 15 * 60 * 1000);
+    }
+
+    private static Observable<Weather> filterUsableWeather(Observable<Weather> observable) {
+        return observable.filter(WeatherDataRepository::isUsableWeather);
+    }
+
+    private static boolean isUsableWeather(Weather weather) {
+        return weather != null && !TextUtils.isEmpty(weather.getCityId()) && weather.getWeatherLive() != null;
     }
 }

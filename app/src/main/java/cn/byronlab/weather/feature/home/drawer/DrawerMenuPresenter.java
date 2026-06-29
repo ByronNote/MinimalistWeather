@@ -12,6 +12,7 @@ import cn.byronlab.weather.di.scope.ActivityScoped;
 
 import java.io.InvalidClassException;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -62,22 +63,24 @@ public final class DrawerMenuPresenter implements DrawerContract.Presenter {
     @Override
     public void loadSavedCities() {
 
-        try {
-            Subscription subscription = Observable.just(weatherDao.queryAllSaveCity())
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(weathers -> view.displaySavedCities(weathers));
-            subscriptions.add(subscription);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        Subscription subscription = Observable.fromCallable(() -> {
+                    List<Weather> weathers = weatherDao.queryAllSaveCity();
+                    return weathers == null ? Collections.<Weather>emptyList() : weathers;
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(weathers -> view.displaySavedCities(weathers), throwable -> {
+                    throwable.printStackTrace();
+                    view.displaySavedCities(Collections.emptyList());
+                });
+        subscriptions.add(subscription);
 
     }
 
     @Override
     public void deleteCity(String cityId) {
 
-        Observable.just(deleteCityFromDBAndReturnCurrentCityId(cityId))
+        Subscription subscription = Observable.fromCallable(() -> deleteCityFromDBAndReturnCurrentCityId(cityId))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(currentCityId -> {
@@ -88,7 +91,8 @@ public final class DrawerMenuPresenter implements DrawerContract.Presenter {
                     } catch (InvalidClassException e) {
                         e.printStackTrace();
                     }
-                });
+                }, Throwable::printStackTrace);
+        subscriptions.add(subscription);
     }
 
     @Override

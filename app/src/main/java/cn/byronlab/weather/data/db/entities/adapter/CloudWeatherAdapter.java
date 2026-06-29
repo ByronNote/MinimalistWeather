@@ -31,12 +31,18 @@ public class CloudWeatherAdapter extends WeatherAdapter {
 
     @Override
     public String getCityId() {
-        return cloudWeatherLive.getCityId();
+        if (cloudWeatherLive != null && !isEmpty(cloudWeatherLive.getCityId())) {
+            return cloudWeatherLive.getCityId();
+        }
+        if (cloudForecast != null && !isEmpty(cloudForecast.getCityId())) {
+            return cloudForecast.getCityId();
+        }
+        return cloudCityAirLive == null ? "" : safeString(cloudCityAirLive.getCityId());
     }
 
     @Override
     public String getCityName() {
-        return cloudForecast.getCityName();
+        return cloudForecast == null ? "" : safeString(cloudForecast.getCityName());
     }
 
     @Override
@@ -48,17 +54,21 @@ public class CloudWeatherAdapter extends WeatherAdapter {
     public WeatherLive getWeatherLive() {
 
         WeatherLive weatherLive = new WeatherLive();
-        weatherLive.setAirPressure(cloudWeatherLive.getAirPressure());
-        weatherLive.setCityId(cloudWeatherLive.getCityId());
-        weatherLive.setFeelsTemperature(cloudWeatherLive.getFeelsTemperature());
-        weatherLive.setHumidity(cloudWeatherLive.getHumidity());
-        weatherLive.setRain(cloudWeatherLive.getRain());
-        weatherLive.setTemp(cloudWeatherLive.getTemperature());
+        if (cloudWeatherLive == null) {
+            weatherLive.setCityId(getCityId());
+            return weatherLive;
+        }
+        weatherLive.setAirPressure(safeString(cloudWeatherLive.getAirPressure()));
+        weatherLive.setCityId(getCityId());
+        weatherLive.setFeelsTemperature(safeString(cloudWeatherLive.getFeelsTemperature()));
+        weatherLive.setHumidity(safeString(cloudWeatherLive.getHumidity()));
+        weatherLive.setRain(safeString(cloudWeatherLive.getRain()));
+        weatherLive.setTemp(safeString(cloudWeatherLive.getTemperature()));
         weatherLive.setTime(DateConvertUtils.dateToTimeStamp(cloudWeatherLive.getUpdateTime(), DateConvertUtils.DATA_FORMAT_PATTEN_YYYY_MM_DD_HH_MM));
-        weatherLive.setWeather(cloudWeatherLive.getPhenomena());
-        weatherLive.setWind(cloudWeatherLive.getWindDirect());
-        weatherLive.setWindPower(cloudWeatherLive.getWindPower());
-        weatherLive.setWindSpeed(cloudWeatherLive.getWindSpeed());
+        weatherLive.setWeather(safeString(cloudWeatherLive.getPhenomena()));
+        weatherLive.setWind(safeString(cloudWeatherLive.getWindDirect()));
+        weatherLive.setWindPower(safeString(cloudWeatherLive.getWindPower()));
+        weatherLive.setWindSpeed(safeString(cloudWeatherLive.getWindSpeed()));
 
         return weatherLive;
     }
@@ -68,26 +78,37 @@ public class CloudWeatherAdapter extends WeatherAdapter {
 
         List<WeatherForecast> weatherForecasts = new ArrayList<>();
 
+        if (cloudForecast == null || cloudForecast.getForecast() == null) {
+            return weatherForecasts;
+        }
+
         for (EnvironmentCloudForecast.ForecastEntity forecastEntity : cloudForecast.getForecast()) {
+            if (forecastEntity == null) {
+                continue;
+            }
+            EnvironmentCloudForecast.ForecastEntity.WindEntity wind = forecastEntity.getWind();
+            EnvironmentCloudForecast.ForecastEntity.AstroEntity astro = forecastEntity.getAstro();
+            EnvironmentCloudForecast.ForecastEntity.TmpEntity tmp = forecastEntity.getTmp();
+            EnvironmentCloudForecast.ForecastEntity.CondEntity cond = forecastEntity.getCond();
 
             WeatherForecast weatherForecast = new WeatherForecast();
-            weatherForecast.setWind(forecastEntity.getWind().getDir());
+            weatherForecast.setWind(wind == null ? "" : safeString(wind.getDir()));
             weatherForecast.setCityId(getCityId());
-            weatherForecast.setHumidity(forecastEntity.getHum());
-            weatherForecast.setMoonrise(forecastEntity.getAstro().getMr());
-            weatherForecast.setMoonset(forecastEntity.getAstro().getMs());
-            weatherForecast.setPop(forecastEntity.getPop());
-            weatherForecast.setPrecipitation(forecastEntity.getPcpn());
-            weatherForecast.setPressure(forecastEntity.getPres());
-            weatherForecast.setSunrise(forecastEntity.getAstro().getSr());
-            weatherForecast.setSunset(forecastEntity.getAstro().getSs());
-            weatherForecast.setTempMax(Integer.parseInt(forecastEntity.getTmp().getMax()));
-            weatherForecast.setTempMin(Integer.parseInt(forecastEntity.getTmp().getMin()));
-            weatherForecast.setUv(forecastEntity.getUv());
-            weatherForecast.setVisibility(forecastEntity.getVis());
+            weatherForecast.setHumidity(safeString(forecastEntity.getHum()));
+            weatherForecast.setMoonrise(astro == null ? "" : safeString(astro.getMr()));
+            weatherForecast.setMoonset(astro == null ? "" : safeString(astro.getMs()));
+            weatherForecast.setPop(safeString(forecastEntity.getPop()));
+            weatherForecast.setPrecipitation(safeString(forecastEntity.getPcpn()));
+            weatherForecast.setPressure(safeString(forecastEntity.getPres()));
+            weatherForecast.setSunrise(astro == null ? "" : safeString(astro.getSr()));
+            weatherForecast.setSunset(astro == null ? "" : safeString(astro.getSs()));
+            weatherForecast.setTempMax(tmp == null ? 0 : parseInt(tmp.getMax(), 0));
+            weatherForecast.setTempMin(tmp == null ? 0 : parseInt(tmp.getMin(), 0));
+            weatherForecast.setUv(safeString(forecastEntity.getUv()));
+            weatherForecast.setVisibility(safeString(forecastEntity.getVis()));
 //            weatherForecast.setWeather();
-            weatherForecast.setWeatherDay(forecastEntity.getCond().getCond_d());
-            weatherForecast.setWeatherNight(forecastEntity.getCond().getCond_n());
+            weatherForecast.setWeatherDay(cond == null ? "" : safeString(cond.getCond_d()));
+            weatherForecast.setWeatherNight(cond == null ? "" : safeString(cond.getCond_n()));
             weatherForecast.setWeek(DateConvertUtils.convertDataToWeek(forecastEntity.getDate()));
             weatherForecast.setDate(DateConvertUtils.convertDataToString(forecastEntity.getDate()));
             weatherForecasts.add(weatherForecast);
@@ -99,65 +120,37 @@ public class CloudWeatherAdapter extends WeatherAdapter {
     @Override
     public List<LifeIndex> getLifeIndexes() {
 
-        EnvironmentCloudForecast.SuggestionEntity suggestionEntity = cloudForecast.getSuggestion();
+        EnvironmentCloudForecast.SuggestionEntity suggestionEntity = cloudForecast == null ? null : cloudForecast.getSuggestion();
 
         List<LifeIndex> indexList = new ArrayList<>();
+        if (suggestionEntity == null) {
+            return indexList;
+        }
 
-        LifeIndex index1 = new LifeIndex();
-        index1.setCityId(cloudForecast.getCityId());
-        index1.setName("空气质量");
-        index1.setIndex(suggestionEntity.getAir().getBrf());
-        index1.setDetails(suggestionEntity.getAir().getTxt());
-        indexList.add(index1);
-
-        LifeIndex index2 = new LifeIndex();
-        index2.setCityId(cloudForecast.getCityId());
-        index2.setName("舒适度");
-        index2.setIndex(suggestionEntity.getComf().getBrf());
-        index2.setDetails(suggestionEntity.getComf().getTxt());
-        indexList.add(index2);
-
-        LifeIndex index3 = new LifeIndex();
-        index3.setCityId(cloudForecast.getCityId());
-        index3.setName("穿衣");
-        index3.setIndex(suggestionEntity.getDrs().getBrf());
-        index3.setDetails(suggestionEntity.getDrs().getTxt());
-        indexList.add(index3);
-
-        LifeIndex index4 = new LifeIndex();
-        index4.setCityId(cloudForecast.getCityId());
-        index4.setName("感冒");
-        index4.setIndex(suggestionEntity.getFlu().getBrf());
-        index4.setDetails(suggestionEntity.getFlu().getTxt());
-        indexList.add(index4);
-
-        LifeIndex index5 = new LifeIndex();
-        index5.setCityId(cloudForecast.getCityId());
-        index5.setName("运动");
-        index5.setIndex(suggestionEntity.getSport().getBrf());
-        index5.setDetails(suggestionEntity.getSport().getTxt());
-        indexList.add(index5);
-
-        LifeIndex index6 = new LifeIndex();
-        index6.setCityId(cloudForecast.getCityId());
-        index6.setName("旅游");
-        index6.setIndex(suggestionEntity.getTrav().getBrf());
-        index6.setDetails(suggestionEntity.getTrav().getTxt());
-        indexList.add(index6);
-
-        LifeIndex index7 = new LifeIndex();
-        index7.setCityId(cloudForecast.getCityId());
-        index7.setName("紫外线");
-        index7.setIndex(suggestionEntity.getUv().getBrf());
-        index7.setDetails(suggestionEntity.getUv().getTxt());
-        indexList.add(index7);
-
-        LifeIndex index8 = new LifeIndex();
-        index8.setCityId(cloudForecast.getCityId());
-        index8.setName("洗车");
-        index8.setIndex(suggestionEntity.getCw().getBrf());
-        index8.setDetails(suggestionEntity.getCw().getTxt());
-        indexList.add(index8);
+        if (suggestionEntity.getAir() != null) {
+            addLifeIndex(indexList, "空气质量", suggestionEntity.getAir().getBrf(), suggestionEntity.getAir().getTxt());
+        }
+        if (suggestionEntity.getComf() != null) {
+            addLifeIndex(indexList, "舒适度", suggestionEntity.getComf().getBrf(), suggestionEntity.getComf().getTxt());
+        }
+        if (suggestionEntity.getDrs() != null) {
+            addLifeIndex(indexList, "穿衣", suggestionEntity.getDrs().getBrf(), suggestionEntity.getDrs().getTxt());
+        }
+        if (suggestionEntity.getFlu() != null) {
+            addLifeIndex(indexList, "感冒", suggestionEntity.getFlu().getBrf(), suggestionEntity.getFlu().getTxt());
+        }
+        if (suggestionEntity.getSport() != null) {
+            addLifeIndex(indexList, "运动", suggestionEntity.getSport().getBrf(), suggestionEntity.getSport().getTxt());
+        }
+        if (suggestionEntity.getTrav() != null) {
+            addLifeIndex(indexList, "旅游", suggestionEntity.getTrav().getBrf(), suggestionEntity.getTrav().getTxt());
+        }
+        if (suggestionEntity.getUv() != null) {
+            addLifeIndex(indexList, "紫外线", suggestionEntity.getUv().getBrf(), suggestionEntity.getUv().getTxt());
+        }
+        if (suggestionEntity.getCw() != null) {
+            addLifeIndex(indexList, "洗车", suggestionEntity.getCw().getBrf(), suggestionEntity.getCw().getTxt());
+        }
 
         return indexList;
     }
@@ -166,19 +159,24 @@ public class CloudWeatherAdapter extends WeatherAdapter {
     public AirQualityLive getAirQualityLive() {
 
         AirQualityLive airQualityLive = new AirQualityLive();
+        if (cloudCityAirLive == null) {
+            airQualityLive.setCityId(getCityId());
+            airQualityLive.setQuality("");
+            return airQualityLive;
+        }
 //        airQualityLive.setAdvice("");
-        airQualityLive.setAqi(Integer.parseInt(cloudCityAirLive.getAqi()));
-        airQualityLive.setCityId(cloudCityAirLive.getCityId());
+        airQualityLive.setAqi(parseInt(cloudCityAirLive.getAqi(), 0));
+        airQualityLive.setCityId(getCityId());
 //        airQualityLive.setCityRank("");
-        airQualityLive.setCo(cloudCityAirLive.getCo());
-        airQualityLive.setNo2(cloudCityAirLive.getNo2());
-        airQualityLive.setO3(cloudCityAirLive.getO3());
-        airQualityLive.setPm10(Integer.parseInt(cloudCityAirLive.getPm10()));
-        airQualityLive.setPm25(Integer.parseInt(cloudCityAirLive.getPm25()));
-        airQualityLive.setPrimary(cloudCityAirLive.getPrimary());
-        airQualityLive.setPublishTime(cloudCityAirLive.getTime());
+        airQualityLive.setCo(safeString(cloudCityAirLive.getCo()));
+        airQualityLive.setNo2(safeString(cloudCityAirLive.getNo2()));
+        airQualityLive.setO3(safeString(cloudCityAirLive.getO3()));
+        airQualityLive.setPm10(parseInt(cloudCityAirLive.getPm10(), 0));
+        airQualityLive.setPm25(parseInt(cloudCityAirLive.getPm25(), 0));
+        airQualityLive.setPrimary(safeString(cloudCityAirLive.getPrimary()));
+        airQualityLive.setPublishTime(safeString(cloudCityAirLive.getTime()));
         airQualityLive.setQuality(getAqiQuality(airQualityLive.getAqi()));
-        airQualityLive.setSo2(cloudCityAirLive.getSo2());
+        airQualityLive.setSo2(safeString(cloudCityAirLive.getSo2()));
         return airQualityLive;
     }
 
@@ -199,6 +197,35 @@ public class CloudWeatherAdapter extends WeatherAdapter {
         } else if (aqi >= 500) {
             return "污染爆表";
         }
-        return null;
+        return "";
+    }
+
+    private void addLifeIndex(List<LifeIndex> indexList, String name, String index, String details) {
+        LifeIndex lifeIndex = new LifeIndex();
+        lifeIndex.setCityId(getCityId());
+        lifeIndex.setName(name);
+        lifeIndex.setIndex(safeString(index));
+        lifeIndex.setDetails(safeString(details));
+        indexList.add(lifeIndex);
+    }
+
+    private int parseInt(String value, int fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+            return fallback;
+        }
+    }
+
+    private String safeString(String value) {
+        return value == null || "null".equalsIgnoreCase(value) ? "" : value;
+    }
+
+    private boolean isEmpty(String value) {
+        return value == null || value.length() == 0;
     }
 }

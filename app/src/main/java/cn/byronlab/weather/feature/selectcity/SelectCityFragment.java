@@ -83,6 +83,9 @@ public class SelectCityFragment extends BaseFragment implements SelectCityContra
 
     @Override
     public void displayCities(List<City> cities) {
+        if (cities == null) {
+            return;
+        }
         this.cities.addAll(cities);
         cityListAdapter.notifyDataSetChanged();
     }

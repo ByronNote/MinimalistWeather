@@ -12,6 +12,8 @@ import cn.byronlab.weather.base.BaseRecyclerViewAdapter;
 import cn.byronlab.weather.library.util.DateConvertUtils;
 import cn.byronlab.weather.R;
 import cn.byronlab.weather.data.db.entities.minimalist.Weather;
+import cn.byronlab.weather.data.db.entities.minimalist.WeatherForecast;
+import cn.byronlab.weather.data.db.entities.minimalist.WeatherLive;
 
 import java.util.List;
 
@@ -42,10 +44,12 @@ public class CityManagerAdapter extends BaseRecyclerViewAdapter<CityManagerAdapt
     @Override
     public void onBindViewHolder(final ViewHolder holder, int position) {
         Weather weather = weatherList.get(position);
-        holder.city.setText(weather.getCityName());
-        holder.weather.setText(weather.getWeatherLive().getWeather());
-        holder.temp.setText(new StringBuilder().append(weather.getWeatherForecasts().get(0).getTempMin()).append("~").append(weather.getWeatherForecasts().get(0).getTempMax()).append("℃").toString());
-        holder.publishTime.setText("发布于 " + DateConvertUtils.timeStampToDate(weather.getWeatherLive().getTime(), DateConvertUtils.DATA_FORMAT_PATTEN_YYYY_MM_DD_HH_MM));
+        WeatherLive weatherLive = weather.getWeatherLive();
+        WeatherForecast forecast = firstForecast(weather);
+        holder.city.setText(safeString(weather.getCityName()));
+        holder.weather.setText(weatherLive == null ? "" : safeString(weatherLive.getWeather()));
+        holder.temp.setText(forecast == null ? "" : new StringBuilder().append(forecast.getTempMin()).append("~").append(forecast.getTempMax()).append("℃").toString());
+        holder.publishTime.setText("发布于 " + (weatherLive == null ? "" : DateConvertUtils.timeStampToDate(weatherLive.getTime(), DateConvertUtils.DATA_FORMAT_PATTEN_YYYY_MM_DD_HH_MM)));
         holder.deleteButton.setOnClickListener(v -> {
             Weather removeWeather = weatherList.get(holder.getAdapterPosition());
             weatherList.remove(removeWeather);
@@ -60,6 +64,17 @@ public class CityManagerAdapter extends BaseRecyclerViewAdapter<CityManagerAdapt
     @Override
     public int getItemCount() {
         return weatherList == null ? 0 : weatherList.size();
+    }
+
+    private WeatherForecast firstForecast(Weather weather) {
+        if (weather == null || weather.getWeatherForecasts() == null || weather.getWeatherForecasts().isEmpty()) {
+            return null;
+        }
+        return weather.getWeatherForecasts().get(0);
+    }
+
+    private String safeString(String value) {
+        return value == null ? "" : value;
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

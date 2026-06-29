@@ -1,6 +1,6 @@
 # 现代化 Clean Architecture 迁移计划
 
-最后更新：2026-06-25
+最后更新：2026-06-26
 
 ## 目标
 
@@ -31,13 +31,20 @@
 - SharedPreferences
 - 偏旧的 AndroidX/support 时代依赖
 
-需要优先处理的已知风险：
+Phase 0 已处理的基线风险：
 
-- 多处使用 `Observable.just(...)` 包裹耗时调用，实际会在 `subscribeOn(...)` 之前同步执行，可能跑在主线程。
-- 网络数据到业务模型的映射假设 API 字段完整且稳定。
-- 日期转换使用了已废弃且结果错误的 `Date` API。
-- lint 已报告 library manifest 错误，但模块配置了 `abortOnError false`，导致错误被吞掉。
-- 应用全局允许明文网络。
+- 启动、城市选择和抽屉城市列表流程中的 eager `Observable.just(...)` 已改为延迟执行。
+- 天气数据映射已补充缺失字段、格式异常和空列表防御。
+- 日期转换已移除已废弃且结果错误的 `Date#getMonth()` / `Date#getDay()` 用法。
+- library/widget manifest 与 namespace 问题已修复，lint 不再通过 `abortOnError false` 吞掉真实错误。
+- 明文网络已从全局允许收敛到必要 legacy API 域名。
+
+Phase 1 已建立的基线能力：
+
+- 已新增独立 `:domain` Java library 模块，`app` 已依赖该模块。
+- 已新增不可变 domain model、Repository 契约、UseCase、`DomainResult` / `DomainError`。
+- Domain 层不依赖 Android framework、RxJava、Retrofit、ORMLite 或 UI 类型。
+- 迁移期 UseCase 暂时保持同步 Java API，旧 Presenter 后续可通过 `Observable.fromCallable(...)` 包装调用；实际 data 适配层在 Phase 2 接入。
 
 ## 目标架构
 
@@ -102,6 +109,8 @@ cn.byronlab.weather
 
 ## Phase 0：稳定遗留应用
 
+状态：已完成，2026-06-26。
+
 目标：在架构迁移前先移除明显运行时风险。
 
 任务：
@@ -115,10 +124,10 @@ cn.byronlab.weather
 
 验证：
 
-- `./gradlew test`
-- `./gradlew lint`
-- `./gradlew assembleDebug`
-- 手动 smoke test：启动应用、加载默认城市、搜索城市、切换城市、删除已保存城市。
+- 已通过：`./gradlew test`
+- 已通过：`./gradlew lint`
+- 已通过：`./gradlew assembleDebug`
+- 待补充：手动 smoke test：启动应用、加载默认城市、搜索城市、切换城市、删除已保存城市。
 
 退出标准：
 
@@ -127,6 +136,8 @@ cn.byronlab.weather
 - lint 没有被 `abortOnError false` 隐藏的错误。
 
 ## Phase 1：建立 Domain 层
+
+状态：已完成，2026-06-26。
 
 目标：先建立纯业务契约，再替换具体实现。
 
@@ -148,12 +159,17 @@ cn.byronlab.weather
 
 验证：
 
-- 对有分支逻辑的 UseCase 补单元测试。
-- 编译通过，暂不改变 UI 行为。
+- 已通过：`:domain:test`
+- 已通过：`./gradlew test`
+- 已通过：`./gradlew lint`
+- 已通过：`./gradlew assembleDebug`
+- 已补充：`SearchCitiesUseCase`、`GetCurrentWeatherUseCase`、`DeleteSavedCityUseCase` 单元测试。
+- 已检查：`domain/src/main/java` 没有 Android、RxJava、Retrofit 或 ORMLite import。
+- 暂未改变现有 UI 行为。
 
 退出标准：
 
-- Presenter 可以通过兼容适配层调用 UseCase。
+- Presenter 可以通过兼容适配层调用 UseCase；实际 data 适配层在 Phase 2 接入。
 - Domain 层没有 Android import。
 
 ## Phase 2：在旧存储/网络外建立 Data 层门面
