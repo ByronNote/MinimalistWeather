@@ -1,6 +1,6 @@
 # MinimalistWeather
 
-> 欢迎关注微信公众号：**BaronTalk**
+> 欢迎关注微信公众号：**BaronNode**
 
 
 ## 一. 前言
@@ -62,12 +62,12 @@
 
 **欢迎扫码关注公众号交流**
 
-<div align="center"><img src="http://resources.byronzhang.com/blog/common/gzh3.png" width="80%"/></div>
+<div align="center"><img src="./扫码关注ByronNote.png" width="80%"/></div>
 
 ## 三. 开源许可 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ```
-Copyright 2017 Baron Zhang
+Copyright 2017 Byron
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
