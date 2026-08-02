@@ -4,7 +4,7 @@
     <style name="LaunchTheme" parent="AppTheme">
         <item name="android:windowBackground">@drawable/bg_launch_window</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="colorPrimaryDark">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 
 </resources>

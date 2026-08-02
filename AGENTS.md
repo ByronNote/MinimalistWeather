@@ -1,8 +1,19 @@
 # Codex 项目规则
 
-## 现代化改造目标
+## 当前架构状态
 
-本项目将从旧版 Java/XML/MVP Android 应用，逐步迁移为现代化 Clean Architecture Android 应用。
+本项目 active app 已迁移为 Compose-first Clean Architecture Android 应用。
+
+当前事实：
+
+- 包名和 applicationId：`cn.byronlab.weather`
+- UI：Jetpack Compose + Material 3
+- 状态：ViewModel + 不可变 `StateFlow<HomeUiState>` + 单向数据流
+- DI：Hilt + KSP
+- 异步：表现层使用 Kotlin Coroutines
+- 模块：`:app`、`:domain`、`:library`
+- 已移除旧 XML/MVP UI、旧 Presenter/Fragment active 路径、旧 Dagger component、ButterKnife、SmartRefresh 和 `:widget` 模块
+- data 底层仍通过 legacy adapter 复用 Retrofit/RxJava、ORMLite、FastJson 和 SharedPreferences
 
 目标架构：
 
@@ -13,24 +24,23 @@
 
 目标技术栈：
 
-- Kotlin 优先；迁移期间未触碰的旧代码可以暂时保留 Java
-- Jetpack Compose + Material 3 用于新 UI
-- ViewModel + StateFlow 管理表现层状态
+- 新 UI 和新表现层代码使用 Kotlin
+- Jetpack Compose + Material 3 用于 UI
+- ViewModel + `StateFlow` 管理表现层状态
 - Kotlin Coroutines + Flow 处理异步任务
 - Hilt 作为依赖注入框架
-- Room 作为本地关系型数据存储
-- DataStore 管理偏好设置和配置
-- Retrofit + OkHttp 处理 HTTP API
+- Room 作为下一阶段本地关系型数据存储目标
+- DataStore 作为下一阶段偏好设置目标
+- Retrofit + OkHttp 处理 HTTP API；下一阶段将 legacy Rx API 改为 suspend API
 - JSON 方案在 API 模型迁移时从 Kotlin serialization 或 Moshi 中选定
-- Compose-first 页面使用 Navigation
+- Compose-first 页面按需使用 Navigation
 - 按需使用 JUnit、Kotlin coroutines test、Turbine、MockK 或同类测试工具
 
 ## 迁移原则
 
-- 渐进式迁移，避免一次性大重写。
 - 每次有意义的改动后都要保持应用可运行。
 - 除非任务明确要求改变行为，否则保持现有行为不变。
-- 优先在旧代码外包一层适配器或门面，再逐步替换内部实现。
+- legacy data 实现必须继续隔离在 repository adapter 和 mapper 后面。
 - 引入新依赖必须有明确的迁移目的。
 - 不要把领域逻辑写进 Android 类、ViewModel、Retrofit DTO、Room Entity 或 Compose UI。
 - 使用不可变模型和单向数据流。
@@ -103,14 +113,14 @@ cn.byronlab.weather
 
 ## 遗留清理优先级
 
-第一阶段迁移前或迁移过程中优先修复：
+下一阶段优先清理：
 
-- 由 eager `Observable.just(...)` 导致的主线程数据库/文件 IO。
-- 天气 mapper 对缺失或异常字段过于脆弱，容易崩溃。
-- 使用已废弃且语义错误的 `Date#getMonth()` 和 `Date#getDay()`。
-- library manifest 中注册 app 层类的问题。
-- 全局允许明文网络；应收敛到必要域名或迁移到 HTTPS。
-- lint 配置吞掉真实错误的问题。
+- 用 Room 替换 ORMLite 天气缓存和城市库访问。
+- 用 DataStore 替换 SharedPreferences/`PreferenceHelper`。
+- 用 Retrofit suspend API 替换 RxJava 1 service 和 blocking bridge。
+- 将 FastJson DTO 迁移到 Kotlin serialization 或 Moshi。
+- 将依赖声明迁移到 version catalog。
+- 删除未被 active app 使用的旧资源、工具类和构建声明。
 
 ## 文档约定
 

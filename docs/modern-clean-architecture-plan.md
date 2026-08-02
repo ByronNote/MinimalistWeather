@@ -1,10 +1,10 @@
 # 现代化 Clean Architecture 迁移计划
 
-最后更新：2026-06-26
+最后更新：2026-08-01
 
 ## 目标
 
-将 MinimalistWeather 逐步现代化为一个可维护的 Kotlin-first Android 应用，采用 Clean Architecture 和当前主流 Jetpack 模式，并在迁移过程中始终保持应用可构建、可运行、可发布。
+将 MinimalistWeather 现代化为一个可维护的 Kotlin-first Android 应用，采用 Clean Architecture、单向数据流和当前主流 Jetpack 模式，并在迁移过程中始终保持应用可构建、可运行、可发布。
 
 目标最终状态：
 
@@ -19,17 +19,23 @@
 
 ## 当前状态概览
 
-应用当前使用：
+active app 当前使用：
 
-- Java
-- XML 布局
-- MVP Presenter
-- Dagger，且部分组件在 Presenter 内部手动创建
-- RxJava 1
-- Retrofit + OkHttp + FastJson converter
-- ORMLite
-- SharedPreferences
-- 偏旧的 AndroidX/support 时代依赖
+- AGP 9.2.0、Gradle 9.4.1、Kotlin 2.3.21
+- Jetpack Compose + Material 3
+- Hilt + KSP
+- ViewModel + `StateFlow<HomeUiState>`
+- Kotlin Coroutines
+- `:domain` 独立 Java library 模块
+- `app -> domain <- data` 的 active 依赖方向
+- 旧 XML/MVP 用户界面、旧 Dagger component、ButterKnife、SmartRefresh、旧 RecyclerView helper、旧状态栏 helper、`widget` 模块已移除
+
+仍保留的 data legacy adapter：
+
+- 天气网络仍复用 Retrofit + OkHttp + FastJson converter + RxJava 1 service。
+- 本地天气缓存和城市库仍复用 ORMLite。
+- 当前城市偏好仍复用 SharedPreferences。
+- 这些 legacy 实现已被隔离到 data repository 和 mapper 后面，presentation/domain 不直接依赖。
 
 Phase 0 已处理的基线风险：
 
@@ -44,7 +50,16 @@ Phase 1 已建立的基线能力：
 - 已新增独立 `:domain` Java library 模块，`app` 已依赖该模块。
 - 已新增不可变 domain model、Repository 契约、UseCase、`DomainResult` / `DomainError`。
 - Domain 层不依赖 Android framework、RxJava、Retrofit、ORMLite 或 UI 类型。
-- 迁移期 UseCase 暂时保持同步 Java API，旧 Presenter 后续可通过 `Observable.fromCallable(...)` 包装调用；实际 data 适配层在 Phase 2 接入。
+- UseCase 暂时保持同步 Java API，由 `HomeViewModel` 在 IO dispatcher 中调用。
+
+2026-08-01 一次性重构结果：
+
+- 新 launcher 为 `cn.byronlab.weather.app.MainActivity`，使用 Compose `setContent`。
+- 首页、城市抽屉、城市搜索合并为 Compose-first 单 Activity 体验。
+- `HomeViewModel` 通过 `HomeUiEvent` 接收用户操作，通过不可变 `HomeUiState` 驱动 UI。
+- Hilt module 负责装配 DAO、legacy repository、domain repository 契约、UseCase 和 dispatcher。
+- data mapper 将 ORMLite/legacy entity 映射到 domain model；presentation mapper 将 domain model 映射到 Compose UI model。
+- `:widget` 模块已从 Gradle 工程中移除。
 
 ## 目标架构
 
@@ -174,14 +189,15 @@ cn.byronlab.weather
 
 ## Phase 2：在旧存储/网络外建立 Data 层门面
 
+状态：active app 已完成，底层实现仍为 legacy adapter。
+
 目标：把现有 Retrofit、ORMLite、SharedPreferences 隔离到 clean 接口之后。
 
 任务：
 
-- 创建满足 domain repository 契约的 data repository 实现。
-- 将 API 响应映射移动到专门的 mapper 类或函数。
-- 将 ORMLite 访问隐藏在 local data source 后。
-- 将偏好设置访问隐藏在 settings data source 后。
+- 已创建满足 domain repository 契约的 data repository 实现。
+- 已将 legacy entity 到 domain model 的映射移动到 mapper。
+- 已将 ORMLite/SharedPreferences 访问隔离到 data repository 内。
 - 为 API 边界场景补 mapper 测试。
 - 用 UseCase 替换 Presenter 对 DAO 和 preference helper 的直接访问。
 
@@ -198,16 +214,16 @@ cn.byronlab.weather
 
 ## Phase 3：Kotlin、Coroutines 和 Flow
 
+状态：presentation 已完成，data 底层仍保留 RxJava bridge。
+
 目标：用结构化并发替代天气和城市流程中的 RxJava。
 
 任务：
 
-- 在项目中启用 Kotlin。
-- 添加 coroutines 和 Flow 依赖。
-- 将 domain use case 转为合适的 `suspend` 函数或 `Flow`。
-- 按垂直切片逐步转换 repository 实现。
-- 从已迁移流程中移除 RxJava。
-- 使用 test dispatcher 补 coroutine 测试。
+- 已在 `app` 启用 Kotlin。
+- 已添加 coroutines 和 Flow 依赖。
+- `HomeViewModel` 对外暴露 `StateFlow<HomeUiState>`。
+- data repository 仍通过 legacy RxJava service 获取天气，后续应替换为 Retrofit suspend API。
 
 推荐顺序：
 
@@ -223,15 +239,16 @@ cn.byronlab.weather
 
 ## Phase 4：Hilt 依赖注入
 
+状态：active app 已完成。
+
 目标：用应用级依赖装配替代手写和散落的 Dagger component 创建。
 
 任务：
 
-- 为 Application 添加 `@HiltAndroidApp`。
-- 为 Android 入口添加 `@AndroidEntryPoint`。
-- 将构造函数改为 `@Inject` 注入。
-- 添加网络、数据库、data source、repository、dispatcher 的 Hilt module。
-- 移除 Presenter 内部创建 Dagger component 的代码。
+- 已为 Application 添加 `@HiltAndroidApp`。
+- 已为 Compose launcher Activity 添加 `@AndroidEntryPoint`。
+- 已添加 repository、use case、dispatcher 的 Hilt module。
+- 已移除旧 Presenter 内部创建 Dagger component 的 active 路径。
 
 验证：
 
@@ -245,20 +262,16 @@ cn.byronlab.weather
 
 ## Phase 5：ViewModel 和 StateFlow 表现层
 
+状态：active app 已完成。
+
 目标：用生命周期感知的状态持有者替换 MVP Presenter。
 
 任务：
 
-- 新增 `HomeViewModel`、`CitySearchViewModel`、`SavedCitiesViewModel`。
-- 定义不可变 UI state：
-  - loading
-  - content
-  - empty
-  - refreshing
-  - error
-- 显式建模 UI event。
-- 暂时保留 XML 页面，从 Fragment 中观察 ViewModel 状态。
-- 每个页面完全迁移后移除对应 Presenter。
+- 已新增 `HomeViewModel`。
+- 已定义不可变 `HomeUiState`，覆盖初始化、加载、刷新、内容、搜索、错误。
+- 已显式建模 `HomeUiEvent`。
+- 已移除旧 MVP Presenter/Fragment active 路径。
 
 验证：
 
@@ -295,38 +308,40 @@ cn.byronlab.weather
 
 ## Phase 7：Compose UI 和 Material 3
 
+状态：active app 已完成。
+
 目标：在保留 ViewModel 契约的前提下，将 XML UI 迁移到 Compose。
 
 任务：
 
-- 建立小型 design system：颜色、字体、间距、天气业务组件。
-- 基于现有 ViewModel 构建 Compose 页面。
-- 按页面逐步迁移：
-  - 城市搜索
-  - 已保存城市/抽屉替代页面
-  - 首页天气页面
-- 用 Compose host 替换 Activity/Fragment XML。
-- 补充无障碍标签、加载状态和错误状态。
+- 已建立 Compose Material 3 theme。
+- 已实现 Compose 首页、已保存城市抽屉、城市搜索对话框。
+- 已用 Compose host 替换 Activity/Fragment XML。
+- 已补充主要按钮 content description、加载状态和错误状态。
 
 验证：
 
-- 手动响应式检查。
-- 高价值页面补截图测试。
-- 检查无障碍 lint 和 content description。
+- 已通过 emulator smoke test：启动应用、打开城市搜索、搜索 `beijing`、选择北京、网络异常时展示错误状态且无 crash。
+- 已通过 lint content description 相关检查。
+- 待补充：高价值页面截图测试。
 
 退出标准：
 
 - 新的用户可见页面使用 Compose。
-- XML 只保留在计划删除的遗留代码中。
+- active app 不再使用 XML 页面布局。
 
 ## Phase 8：依赖和模块清理
+
+状态：部分完成。
 
 目标：移除过时库，简化构建结构。
 
 任务：
 
-- 移除 RxJava、ButterKnife、ORMLite、旧 support 时代依赖和未使用资源。
-- 移除未使用的 `library`/`widget` 代码，或将仍有价值的部分迁入 `core` 包/模块。
+- 已移除 ButterKnife、SmartRefresh、RxBinding、旧 Dagger active 路径和 `widget` 模块。
+- 已移除旧 View helper、状态栏 helper、Fragment/RecyclerView helper 和未引用的 app 级遗留模型文件。
+- RxJava、ORMLite、FastJson 和 SharedPreferences 仍存在于 data legacy adapter。
+- `library` 当前只保留 active data/UI 仍使用的 `DateConvertUtils` 和 `NetworkUtils`。
 - 将依赖声明迁入 version catalog。
 - 在可行范围内启用更严格的 lint 和编译告警。
 - 只有当 clean 包边界稳定后，才考虑进一步模块化。

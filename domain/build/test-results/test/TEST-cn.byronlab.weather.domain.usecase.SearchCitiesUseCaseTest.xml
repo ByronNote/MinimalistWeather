@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="cn.byronlab.weather.domain.usecase.SearchCitiesUseCaseTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-06-26T09:31:12.074Z" hostname="byrondeMacBook-Pro.local" time="0.0">
-  <properties/>
-  <testcase name="nonBlankKeywordIsTrimmedBeforeSearch" classname="cn.byronlab.weather.domain.usecase.SearchCitiesUseCaseTest" time="0.0"/>
-  <testcase name="blankKeywordReturnsEmptyListWithoutCallingRepository" classname="cn.byronlab.weather.domain.usecase.SearchCitiesUseCaseTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

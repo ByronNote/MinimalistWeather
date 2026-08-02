@@ -8,19 +8,16 @@ import android.util.Log;
 import cn.byronlab.weather.data.http.ApiClient;
 import cn.byronlab.weather.data.http.ApiConstants;
 import cn.byronlab.weather.data.http.configuration.ApiConfiguration;
-import cn.byronlab.weather.di.component.ApplicationComponent;
-import cn.byronlab.weather.di.component.DaggerApplicationComponent;
-import cn.byronlab.weather.di.module.ApplicationModule;
+import dagger.hilt.android.HiltAndroidApp;
 
 /**
  * @author byron (byron[dot]zhanglei[at]gmail[dot]com)
  *         16/2/4
  */
+@HiltAndroidApp
 public class WeatherApplication extends Application {
 
     private static final String TAG = "WeatherApp";
-
-    private ApplicationComponent applicationComponent;
 
     private static WeatherApplication weatherApplicationInstance;
 
@@ -39,19 +36,15 @@ public class WeatherApplication extends Application {
     public void onCreate() {
         super.onCreate();
         Log.d(TAG, "onCreate start");
+        weatherApplicationInstance = this;
+
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build());
             StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectAll().penaltyLog().build());
         }
 
-        applicationComponent = DaggerApplicationComponent.builder()
-                .applicationModule(new ApplicationModule(this))
-                .build();
-
         //初始化Stetho
         BuildConfig.STETHO.init(this.getApplicationContext());
-
-        weatherApplicationInstance = this;
 
         //初始化ApiClient
         ApiConfiguration apiConfiguration = ApiConfiguration.builder()
@@ -61,11 +54,5 @@ public class WeatherApplication extends Application {
                 .build();
         ApiClient.init(apiConfiguration);
         Log.d(TAG, "onCreate end");
-    }
-
-
-    public ApplicationComponent getApplicationComponent() {
-
-        return applicationComponent;
     }
 }

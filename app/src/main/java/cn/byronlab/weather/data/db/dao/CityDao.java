@@ -26,7 +26,7 @@ public class CityDao {
     private Dao<HotCity, Integer> hotCityDaoOperation;
 
     @Inject
-    CityDao(Context context) {
+    public CityDao(Context context) {
 
         this.cityDaoOperation = CityDatabaseHelper.getInstance(context).getCityDao(City.class);
         this.hotCityDaoOperation = CityDatabaseHelper.getInstance(context).getCityDao(HotCity.class);

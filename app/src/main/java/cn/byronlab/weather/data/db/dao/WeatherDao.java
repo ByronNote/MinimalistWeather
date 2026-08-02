@@ -34,7 +34,7 @@ public class WeatherDao {
     private Dao<Weather, String> weatherDaoOperation;
 
     @Inject
-    WeatherDao(Context context) {
+    public WeatherDao(Context context) {
 
         this.context = context;
         this.apiDaoOperation = WeatherDatabaseHelper.getInstance(context).getWeatherDao(AirQualityLive.class);

@@ -1,12 +1,21 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'com.google.dagger.hilt.android'
+apply plugin: 'com.google.devtools.ksp'
 
 android {
-    namespace rootProject.ext.android.applicationId
+    namespace = rootProject.ext.android.applicationId
     compileSdk rootProject.ext.android.compileSdkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        }
     }
 
     defaultConfig {
@@ -27,11 +36,14 @@ android {
         release {
             buildConfigField("boolean", "LOG_DEBUG", "false")
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             buildConfigField 'cn.byronlab.weather.util.StethoHelper', 'STETHO', 'new cn.byronlab.weather.util.stetho.ReleaseStethoHelper()'
         }
     }
-    buildFeatures { buildConfig true }
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
 }
 
 dependencies {
@@ -39,17 +51,34 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
 
     implementation project(':library')
-    implementation project(':widget')
     implementation project(':domain')
 
-    implementation rootProject.ext.dependencies["SmartRefreshLayout"]
-    implementation rootProject.ext.dependencies["SmartRefreshHeader"]
-
-    implementation rootProject.ext.dependencies["butterknife"]
-    annotationProcessor rootProject.ext.dependencies["butterknife-compiler"]
-
-    implementation rootProject.ext.dependencies["dagger"]
-    annotationProcessor rootProject.ext.dependencies["dagger-compiler"]
+    implementation rootProject.ext.dependencies["hilt-android"]
+    ksp rootProject.ext.dependencies["hilt-compiler"]
 
     implementation rootProject.ext.dependencies["retrofit2-fastjson-converter"]
+    implementation rootProject.ext.dependencies["annotation"]
+    implementation rootProject.ext.dependencies["rxjava"]
+    implementation rootProject.ext.dependencies["retrofit"]
+    implementation rootProject.ext.dependencies["adapter-rxjava"]
+    implementation rootProject.ext.dependencies["fastjson"]
+    implementation rootProject.ext.dependencies["okhttp"]
+    implementation rootProject.ext.dependencies["okhttp3-logging-interceptor"]
+    implementation rootProject.ext.dependencies["ormlite-android"]
+    debugImplementation rootProject.ext.dependencies["stetho"]
+    debugImplementation rootProject.ext.dependencies["stetho-okhttp3"]
+    implementation rootProject.ext.dependencies["activity-compose"]
+    implementation platform(rootProject.ext.dependencies["compose-bom"])
+    implementation "androidx.compose.foundation:foundation"
+    implementation "androidx.compose.material3:material3"
+    implementation "androidx.compose.material:material-icons-extended"
+    implementation "androidx.compose.runtime:runtime"
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.ui:ui-tooling-preview"
+    debugImplementation "androidx.compose.ui:ui-tooling"
+    implementation rootProject.ext.dependencies["lifecycle-runtime-compose"]
+    implementation rootProject.ext.dependencies["lifecycle-runtime-ktx"]
+    implementation rootProject.ext.dependencies["lifecycle-viewmodel-compose"]
+    implementation rootProject.ext.dependencies["lifecycle-viewmodel-ktx"]
+    implementation rootProject.ext.dependencies["kotlinx-coroutines-android"]
 }

@@ -14,26 +14,14 @@
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
         <activity
-            android:name=".WelcomeActivity"
+            android:name=".app.MainActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
-            android:theme="@style/LaunchTheme">
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".feature.home.MainActivity"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name=".feature.selectcity.SelectCityActivity"
-            android:label="@string/title_activity_select_city"
-            android:screenOrientation="portrait" />
-
-
     </application>
 
 </manifest>
