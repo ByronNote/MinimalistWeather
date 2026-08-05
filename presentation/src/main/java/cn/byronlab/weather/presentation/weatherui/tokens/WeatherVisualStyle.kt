@@ -10,6 +10,7 @@ import cn.byronlab.weather.presentation.weatherui.model.WeatherPrecipitationPatt
 import cn.byronlab.weather.presentation.weatherui.model.WeatherSceneSpec
 import cn.byronlab.weather.presentation.weatherui.model.WeatherSkyPhase
 import cn.byronlab.weather.presentation.weatherui.model.WeatherVisualType
+import cn.byronlab.weather.presentation.weatherui.model.WeatherWindLevel
 import cn.byronlab.weather.presentation.weatherui.model.visualType
 
 @Immutable
@@ -39,17 +40,17 @@ internal fun weatherVisualStyle(scene: WeatherSceneSpec): WeatherVisualStyle {
     return when {
         scene.atmosphere == WeatherAtmosphere.Fog -> base.copy(
             backgroundColors = if (scene.skyPhase == WeatherSkyPhase.Day) {
-                listOf(Color(0xFF788B9B), Color(0xFFB4C0C9), Color(0xFFE5E9EC))
+                listOf(Color(0xFF718595), Color(0xFF9EADB6), Color(0xFFCBD3D7))
             } else {
-                listOf(Color(0xFF283744), Color(0xFF526675), Color(0xFF8998A3))
+                listOf(Color(0xFF1D2D39), Color(0xFF405460), Color(0xFF71818B))
             },
-            panelColor = Color(0xFF4D6374).copy(alpha = 0.58f),
+            panelColor = Color(0xFF40596B).copy(alpha = 0.61f),
             glassChipColor = Color.White.copy(alpha = 0.17f),
             accent = Color(0xFFB7CAD7),
             heroIcon = Color(0xFFF0F4F6),
-            photoOverlayTop = Color(0x596A7C89),
-            photoOverlayBottom = Color(0xD54A6477),
-            photoOverlaySide = Color(0x52657683),
+            photoOverlayTop = Color(0x4A607380),
+            photoOverlayBottom = Color(0xC8435D6D),
+            photoOverlaySide = Color(0x4661737F),
         )
         scene.lightningIntensity != WeatherLightningIntensity.None -> base.copy(
             backgroundColors = if (scene.skyPhase == WeatherSkyPhase.Day) {
@@ -77,6 +78,33 @@ internal fun weatherVisualStyle(scene: WeatherSceneSpec): WeatherVisualStyle {
             photoOverlayTop = Color(0x80516477),
             photoOverlayBottom = Color(0xE3294962),
             photoOverlaySide = Color(0x76516477),
+        )
+        type == WeatherVisualType.Rain &&
+            scene.precipitationIntensity == WeatherIntensity.Heavy &&
+            scene.precipitationPattern == WeatherPrecipitationPattern.Showers &&
+            scene.windLevel == WeatherWindLevel.Windy -> base.copy(
+            backgroundColors = if (scene.skyPhase == WeatherSkyPhase.Day) {
+                listOf(Color(0xFF182A3B), Color(0xFF3A5D73), Color(0xFF879FAC))
+            } else {
+                listOf(Color(0xFF050D18), Color(0xFF13283A), Color(0xFF3D5B6C))
+            },
+            panelColor = Color(0xFF183B54).copy(alpha = 0.68f),
+            photoOverlayTop = Color(0x96324759),
+            photoOverlayBottom = Color(0xF018394F),
+            photoOverlaySide = Color(0x88324759),
+        )
+        type == WeatherVisualType.Rain &&
+            scene.precipitationIntensity == WeatherIntensity.Heavy &&
+            scene.precipitationPattern == WeatherPrecipitationPattern.Showers -> base.copy(
+            backgroundColors = if (scene.skyPhase == WeatherSkyPhase.Day) {
+                listOf(Color(0xFF223D53), Color(0xFF50758C), Color(0xFFA6BBC5))
+            } else {
+                listOf(Color(0xFF071321), Color(0xFF1B3346), Color(0xFF4A687A))
+            },
+            panelColor = Color(0xFF20455E).copy(alpha = 0.64f),
+            photoOverlayTop = Color(0x863B5669),
+            photoOverlayBottom = Color(0xE91C4057),
+            photoOverlaySide = Color(0x793B5669),
         )
         type == WeatherVisualType.Rain &&
             scene.precipitationPattern == WeatherPrecipitationPattern.Showers -> base.copy(
@@ -112,11 +140,48 @@ internal fun weatherVisualStyle(scene: WeatherSceneSpec): WeatherVisualStyle {
             photoOverlayBottom = Color(0xEF102A40),
             photoOverlaySide = Color(0x87304255),
         )
+        scene.precipitation == WeatherPrecipitation.SnowGrains -> base.copy(
+            backgroundColors = if (scene.skyPhase == WeatherSkyPhase.Day) {
+                listOf(Color(0xFF7895AA), Color(0xFFB1C6D5), Color(0xFFDDE7ED))
+            } else {
+                listOf(Color(0xFF203347), Color(0xFF506A7F), Color(0xFF91A5B4))
+            },
+            panelColor = Color(0xFF496B84).copy(alpha = 0.60f),
+            photoOverlayTop = Color(0x6A819DB2),
+            photoOverlayBottom = Color(0xDB466B85),
+            photoOverlaySide = Color(0x62819DB2),
+        )
+        type == WeatherVisualType.Snow &&
+            scene.precipitationIntensity == WeatherIntensity.Heavy &&
+            scene.precipitationPattern == WeatherPrecipitationPattern.Flurries &&
+            scene.windLevel == WeatherWindLevel.Windy -> base.copy(
+            backgroundColors = if (scene.skyPhase == WeatherSkyPhase.Day) {
+                listOf(Color(0xFF48647C), Color(0xFF7897AE), Color(0xFFB8CDD9))
+            } else {
+                listOf(Color(0xFF111F2E), Color(0xFF304A60), Color(0xFF6E8799))
+            },
+            panelColor = Color(0xFF365974).copy(alpha = 0.67f),
+            photoOverlayTop = Color(0x7F526E86),
+            photoOverlayBottom = Color(0xE6355873),
+            photoOverlaySide = Color(0x75526E86),
+        )
+        type == WeatherVisualType.Snow &&
+            scene.precipitationPattern == WeatherPrecipitationPattern.Flurries -> base.copy(
+            backgroundColors = if (scene.skyPhase == WeatherSkyPhase.Day) {
+                listOf(Color(0xFF708FA8), Color(0xFFA8C0D2), Color(0xFFDCE7ED))
+            } else {
+                listOf(Color(0xFF1B3044), Color(0xFF48647A), Color(0xFF8AA0B0))
+            },
+            panelColor = Color(0xFF466983).copy(alpha = 0.61f),
+            photoOverlayTop = Color(0x6F7896AE),
+            photoOverlayBottom = Color(0xDD426783),
+            photoOverlaySide = Color(0x677896AE),
+        )
         type == WeatherVisualType.Snow && scene.precipitationIntensity == WeatherIntensity.Heavy -> base.copy(
             backgroundColors = if (scene.skyPhase == WeatherSkyPhase.Day) {
-                listOf(Color(0xFF9FBBD5), Color(0xFFD7E8F5), Color(0xFFF6FAFC))
+                listOf(Color(0xFF647F97), Color(0xFF9CB7CB), Color(0xFFD2E0E8))
             } else {
-                listOf(Color(0xFF253B51), Color(0xFF5F7C96), Color(0xFFB1C4D4))
+                listOf(Color(0xFF203449), Color(0xFF526F87), Color(0xFF98ADBD))
             },
             panelColor = Color(0xFF496B88).copy(alpha = 0.58f),
             photoOverlayTop = Color(0x78829EB7),
@@ -213,18 +278,18 @@ private fun baseWeatherVisualStyle(
             sunGlow = Color(0xFF7DD3FC),
         )
         WeatherVisualType.Snow -> WeatherVisualStyle(
-            backgroundColors = listOf(Color(0xFFBCD6F2), Color(0xFFE8F4FF), Color(0xFFF8FAFC)),
+            backgroundColors = listOf(Color(0xFF7392AD), Color(0xFFAFC6D8), Color(0xFFDCE7EE)),
             content = Color.White,
-            panelColor = Color(0xFF52718F).copy(alpha = 0.52f),
+            panelColor = Color(0xFF456784).copy(alpha = 0.58f),
             panelContent = Color.White,
             glassChipColor = Color.White.copy(alpha = 0.18f),
             accent = Color(0xFF38BDF8),
             heroIcon = Color.White,
             warmAccent = Color(0xFFFFB86B),
             coolAccent = Color(0xFF38BDF8),
-            photoOverlayTop = Color(0x6689A6C2),
-            photoOverlayBottom = Color(0xD84B6F91),
-            photoOverlaySide = Color(0x6689A6C2),
+            photoOverlayTop = Color(0x705D7D99),
+            photoOverlayBottom = Color(0xDF345C7B),
+            photoOverlaySide = Color(0x685D7D99),
             sunCore = Color(0xFFFFFFFF),
             sunGlow = Color(0xFFDFF6FF),
         )

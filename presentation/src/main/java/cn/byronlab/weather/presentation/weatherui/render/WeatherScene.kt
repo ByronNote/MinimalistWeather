@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -48,6 +49,8 @@ import cn.byronlab.weather.presentation.weatherui.model.visualType
 import cn.byronlab.weather.presentation.weatherui.tokens.WeatherVisualStyle
 import cn.byronlab.weather.presentation.weatherui.tokens.weatherVisualStyle
 import kotlin.math.PI
+import kotlin.math.floor
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 @Composable
@@ -100,6 +103,17 @@ private fun WeatherSceneContent(scene: WeatherSceneSpec) {
         ),
         label = "weather-lightning-flash",
     )
+    val lightningStrikePhase by motion.animateFloat(
+        initialValue = 0f,
+        targetValue = lightningStrikeSpecs.size.toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = scene.lightningStrikeCycleDurationMillis(),
+                easing = LinearEasing,
+            ),
+        ),
+        label = "weather-lightning-strike-variant",
+    )
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -122,13 +136,19 @@ private fun WeatherSceneContent(scene: WeatherSceneSpec) {
             )
             drawWeatherPhotoOverlays(style)
             if (scene.atmosphere == WeatherAtmosphere.Fog) {
-                drawFog(size.width, size.height, cloudMotionProgress)
+                drawFog(
+                    width = size.width,
+                    height = size.height,
+                    motionProgress = cloudMotionProgress,
+                    isDaytime = scene.skyPhase == WeatherSkyPhase.Day,
+                )
             }
             if (scene.lightningIntensity != WeatherLightningIntensity.None) {
                 drawThunderstorm(
                     width = size.width,
                     height = size.height,
                     flash = lightningFlash,
+                    strikeIndex = lightningStrikeIndex(lightningStrikePhase),
                 )
             }
         }
@@ -148,43 +168,303 @@ private fun WeatherSceneSpec.cloudMotionDurationMillis(): Int {
     }
 }
 
-private fun WeatherSceneSpec.precipitationMotionDurationMillis(): Int {
+internal fun WeatherSceneSpec.precipitationMotionDurationMillis(): Int {
     return when (precipitation) {
         WeatherPrecipitation.None -> 12_000
-        WeatherPrecipitation.Drizzle -> 2_200
-        WeatherPrecipitation.Rain -> 1_250
-        WeatherPrecipitation.Snow -> 4_600
-        WeatherPrecipitation.SnowGrains -> 2_800
-        WeatherPrecipitation.Sleet -> 2_500
-        WeatherPrecipitation.Hail -> 1_500
+        WeatherPrecipitation.Drizzle -> 3_200
+        WeatherPrecipitation.Rain -> when {
+            precipitationIntensity == WeatherIntensity.Heavy &&
+                precipitationPattern == WeatherPrecipitationPattern.Showers &&
+                windLevel == WeatherWindLevel.Windy -> 1_480
+            precipitationIntensity == WeatherIntensity.Heavy &&
+                precipitationPattern == WeatherPrecipitationPattern.Showers -> 1_720
+            precipitationIntensity == WeatherIntensity.None -> 12_000
+            precipitationIntensity == WeatherIntensity.Light -> 2_800
+            precipitationIntensity == WeatherIntensity.Moderate -> 2_400
+            else -> 2_050
+        }
+        WeatherPrecipitation.Snow -> when {
+            precipitationIntensity == WeatherIntensity.Heavy &&
+                precipitationPattern == WeatherPrecipitationPattern.Flurries -> 2_350
+            precipitationIntensity == WeatherIntensity.Heavy -> 3_350
+            precipitationIntensity == WeatherIntensity.Moderate &&
+                precipitationPattern == WeatherPrecipitationPattern.Flurries -> 3_150
+            precipitationIntensity == WeatherIntensity.Moderate -> 4_100
+            else -> 5_200
+        }
+        WeatherPrecipitation.SnowGrains -> 2_550
+        WeatherPrecipitation.Sleet -> 2_150
+        WeatherPrecipitation.Hail -> 1_550
     }
 }
 
-private fun WeatherSceneSpec.lightningAnimation() = when (lightningIntensity) {
-    WeatherLightningIntensity.None -> keyframes {
-        durationMillis = 8_000
-        0f at 0
-        0f at 8_000
+internal data class LightningFlashFrame(
+    val timeMillis: Int,
+    val intensity: Float,
+)
+
+internal data class LightningFlashProfile(
+    val durationMillis: Int,
+    val frames: List<LightningFlashFrame>,
+)
+
+internal fun lightningFlashProfile(intensity: WeatherLightningIntensity): LightningFlashProfile {
+    return when (intensity) {
+        WeatherLightningIntensity.None -> LightningFlashProfile(
+            durationMillis = 8_000,
+            frames = listOf(
+                LightningFlashFrame(0, 0f),
+                LightningFlashFrame(8_000, 0f),
+            ),
+        )
+        WeatherLightningIntensity.Occasional -> LightningFlashProfile(
+            durationMillis = 5_800,
+            frames = listOf(
+                LightningFlashFrame(0, 0f),
+                LightningFlashFrame(3_350, 0f),
+                LightningFlashFrame(3_410, 0.10f),
+                LightningFlashFrame(3_460, 0.90f),
+                LightningFlashFrame(3_525, 0.15f),
+                LightningFlashFrame(3_585, 0f),
+                LightningFlashFrame(3_680, 0.62f),
+                LightningFlashFrame(3_760, 0.10f),
+                LightningFlashFrame(3_830, 0f),
+                LightningFlashFrame(5_800, 0f),
+            ),
+        )
+        WeatherLightningIntensity.Frequent -> LightningFlashProfile(
+            durationMillis = 3_600,
+            frames = listOf(
+                LightningFlashFrame(0, 0f),
+                LightningFlashFrame(1_900, 0f),
+                LightningFlashFrame(1_960, 0.18f),
+                LightningFlashFrame(2_010, 1f),
+                LightningFlashFrame(2_070, 0.12f),
+                LightningFlashFrame(2_130, 0f),
+                LightningFlashFrame(2_220, 0.76f),
+                LightningFlashFrame(2_295, 0.08f),
+                LightningFlashFrame(2_360, 0f),
+                LightningFlashFrame(2_460, 0.36f),
+                LightningFlashFrame(2_520, 0.05f),
+                LightningFlashFrame(2_580, 0f),
+                LightningFlashFrame(3_600, 0f),
+            ),
+        )
     }
-    WeatherLightningIntensity.Occasional -> keyframes {
-        durationMillis = 6_800
-        0f at 0
-        0f at 4_900
-        0.92f at 5_020
-        0.08f at 5_150
-        0.62f at 5_280
-        0f at 5_460
-        0f at 6_800
-    }
-    WeatherLightningIntensity.Frequent -> keyframes {
-        durationMillis = 4_600
-        0f at 0
-        0f at 2_650
-        1f at 2_760
-        0.12f at 2_900
-        0.82f at 3_020
-        0f at 3_220
-        0f at 4_600
+}
+
+private fun WeatherSceneSpec.lightningStrikeCycleDurationMillis(): Int {
+    return lightningFlashProfile(lightningIntensity).durationMillis * lightningStrikeSpecs.size
+}
+
+internal fun lightningVisibility(flash: Float): Float {
+    return ((flash - 0.025f) / 0.975f).coerceIn(0f, 1f)
+}
+
+internal data class LightningPathPoint(
+    val xFraction: Float,
+    val yFraction: Float,
+)
+
+internal data class LightningStrikeSpec(
+    val originXFraction: Float,
+    val originYFraction: Float,
+    val mainPath: List<LightningPathPoint>,
+    val branchPaths: List<List<LightningPathPoint>>,
+    val brightnessScale: Float,
+    val glowScale: Float,
+)
+
+internal val lightningStrikeSpecs = listOf(
+    LightningStrikeSpec(
+        originXFraction = 0.76f,
+        originYFraction = 0.105f,
+        mainPath = listOf(
+            LightningPathPoint(0f, 0f),
+            LightningPathPoint(-0.016f, 0.035f),
+            LightningPathPoint(0.008f, 0.065f),
+            LightningPathPoint(-0.028f, 0.102f),
+            LightningPathPoint(-0.008f, 0.135f),
+            LightningPathPoint(-0.055f, 0.180f),
+            LightningPathPoint(-0.036f, 0.222f),
+            LightningPathPoint(-0.082f, 0.275f),
+        ),
+        branchPaths = listOf(
+            listOf(
+                LightningPathPoint(-0.028f, 0.102f),
+                LightningPathPoint(-0.075f, 0.126f),
+                LightningPathPoint(-0.100f, 0.160f),
+            ),
+            listOf(
+                LightningPathPoint(-0.055f, 0.180f),
+                LightningPathPoint(-0.015f, 0.206f),
+                LightningPathPoint(-0.002f, 0.243f),
+            ),
+        ),
+        brightnessScale = 1f,
+        glowScale = 1f,
+    ),
+    LightningStrikeSpec(
+        originXFraction = 0.30f,
+        originYFraction = 0.130f,
+        mainPath = listOf(
+            LightningPathPoint(0f, 0f),
+            LightningPathPoint(0.018f, 0.030f),
+            LightningPathPoint(-0.004f, 0.055f),
+            LightningPathPoint(0.034f, 0.090f),
+            LightningPathPoint(0.015f, 0.125f),
+            LightningPathPoint(0.062f, 0.160f),
+            LightningPathPoint(0.044f, 0.195f),
+            LightningPathPoint(0.090f, 0.245f),
+        ),
+        branchPaths = listOf(
+            listOf(
+                LightningPathPoint(0.034f, 0.090f),
+                LightningPathPoint(0.082f, 0.105f),
+                LightningPathPoint(0.105f, 0.140f),
+            ),
+            listOf(
+                LightningPathPoint(0.062f, 0.160f),
+                LightningPathPoint(0.020f, 0.178f),
+                LightningPathPoint(-0.002f, 0.210f),
+            ),
+        ),
+        brightnessScale = 0.90f,
+        glowScale = 0.92f,
+    ),
+    LightningStrikeSpec(
+        originXFraction = 0.61f,
+        originYFraction = 0.090f,
+        mainPath = listOf(
+            LightningPathPoint(0f, 0f),
+            LightningPathPoint(-0.028f, 0.030f),
+            LightningPathPoint(-0.010f, 0.060f),
+            LightningPathPoint(-0.048f, 0.095f),
+            LightningPathPoint(-0.025f, 0.132f),
+            LightningPathPoint(-0.073f, 0.172f),
+            LightningPathPoint(-0.055f, 0.215f),
+            LightningPathPoint(-0.110f, 0.310f),
+        ),
+        branchPaths = listOf(
+            listOf(
+                LightningPathPoint(-0.010f, 0.060f),
+                LightningPathPoint(0.038f, 0.085f),
+                LightningPathPoint(0.060f, 0.120f),
+            ),
+            listOf(
+                LightningPathPoint(-0.073f, 0.172f),
+                LightningPathPoint(-0.126f, 0.194f),
+                LightningPathPoint(-0.151f, 0.238f),
+            ),
+            listOf(
+                LightningPathPoint(-0.055f, 0.215f),
+                LightningPathPoint(-0.012f, 0.244f),
+                LightningPathPoint(0.006f, 0.280f),
+            ),
+        ),
+        brightnessScale = 1.06f,
+        glowScale = 1.08f,
+    ),
+    LightningStrikeSpec(
+        originXFraction = 0.86f,
+        originYFraction = 0.155f,
+        mainPath = listOf(
+            LightningPathPoint(0f, 0f),
+            LightningPathPoint(-0.035f, 0.026f),
+            LightningPathPoint(-0.020f, 0.054f),
+            LightningPathPoint(-0.072f, 0.080f),
+            LightningPathPoint(-0.047f, 0.112f),
+            LightningPathPoint(-0.100f, 0.150f),
+            LightningPathPoint(-0.078f, 0.190f),
+        ),
+        branchPaths = listOf(
+            listOf(
+                LightningPathPoint(-0.020f, 0.054f),
+                LightningPathPoint(0.020f, 0.077f),
+                LightningPathPoint(0.034f, 0.108f),
+            ),
+            listOf(
+                LightningPathPoint(-0.072f, 0.080f),
+                LightningPathPoint(-0.116f, 0.094f),
+                LightningPathPoint(-0.140f, 0.128f),
+            ),
+        ),
+        brightnessScale = 0.82f,
+        glowScale = 0.84f,
+    ),
+    LightningStrikeSpec(
+        originXFraction = 0.49f,
+        originYFraction = 0.110f,
+        mainPath = listOf(
+            LightningPathPoint(0f, 0f),
+            LightningPathPoint(0.025f, 0.032f),
+            LightningPathPoint(0.006f, 0.066f),
+            LightningPathPoint(0.052f, 0.100f),
+            LightningPathPoint(0.032f, 0.142f),
+            LightningPathPoint(0.081f, 0.181f),
+            LightningPathPoint(0.058f, 0.223f),
+            LightningPathPoint(0.105f, 0.282f),
+        ),
+        branchPaths = listOf(
+            listOf(
+                LightningPathPoint(0.006f, 0.066f),
+                LightningPathPoint(-0.040f, 0.088f),
+                LightningPathPoint(-0.061f, 0.124f),
+            ),
+            listOf(
+                LightningPathPoint(0.052f, 0.100f),
+                LightningPathPoint(0.095f, 0.123f),
+                LightningPathPoint(0.115f, 0.160f),
+            ),
+            listOf(
+                LightningPathPoint(0.081f, 0.181f),
+                LightningPathPoint(0.038f, 0.204f),
+                LightningPathPoint(0.018f, 0.242f),
+            ),
+        ),
+        brightnessScale = 0.96f,
+        glowScale = 1.02f,
+    ),
+    LightningStrikeSpec(
+        originXFraction = 0.70f,
+        originYFraction = 0.135f,
+        mainPath = listOf(
+            LightningPathPoint(0f, 0f),
+            LightningPathPoint(0.012f, 0.028f),
+            LightningPathPoint(-0.020f, 0.058f),
+            LightningPathPoint(0.006f, 0.091f),
+            LightningPathPoint(-0.036f, 0.124f),
+            LightningPathPoint(-0.018f, 0.165f),
+            LightningPathPoint(-0.062f, 0.218f),
+        ),
+        branchPaths = listOf(
+            listOf(
+                LightningPathPoint(0f, 0f),
+                LightningPathPoint(0.050f, 0.042f),
+                LightningPathPoint(0.077f, 0.095f),
+                LightningPathPoint(0.056f, 0.154f),
+                LightningPathPoint(0.093f, 0.208f),
+            ),
+            listOf(
+                LightningPathPoint(0.006f, 0.091f),
+                LightningPathPoint(-0.082f, 0.112f),
+                LightningPathPoint(-0.111f, 0.154f),
+            ),
+        ),
+        brightnessScale = 0.92f,
+        glowScale = 0.96f,
+    ),
+)
+
+internal fun lightningStrikeIndex(phase: Float): Int {
+    return floor(phase).toInt().coerceIn(0, lightningStrikeSpecs.lastIndex)
+}
+
+private fun WeatherSceneSpec.lightningAnimation() = keyframes {
+    val profile = lightningFlashProfile(lightningIntensity)
+    durationMillis = profile.durationMillis
+    profile.frames.forEach { frame ->
+        frame.intensity at frame.timeMillis
     }
 }
 
@@ -432,14 +712,52 @@ private fun DrawScope.drawWeatherBackdropTint(
     lightningFlash: Float,
 ) {
     if (scene.atmosphere == WeatherAtmosphere.Fog) {
-        drawRect(Color(0xFFDCE4E9).copy(alpha = 0.18f), size = size)
+        val isDaytime = scene.skyPhase == WeatherSkyPhase.Day
+        drawRect(
+            brush = Brush.verticalGradient(
+                colors = if (isDaytime) {
+                    listOf(
+                        Color(0xFF5F7484).copy(alpha = 0.08f),
+                        Color(0xFFD5DDE0).copy(alpha = 0.17f),
+                        Color(0xFFE7EBEC).copy(alpha = 0.22f),
+                    )
+                } else {
+                    listOf(
+                        Color(0xFF172734).copy(alpha = 0.12f),
+                        Color(0xFF81929C).copy(alpha = 0.13f),
+                        Color(0xFFB6C1C6).copy(alpha = 0.16f),
+                    )
+                },
+            ),
+            size = size,
+        )
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = if (isDaytime) 0.09f else 0.035f),
+                    Color.Transparent,
+                ),
+                center = Offset(size.width * 0.68f, size.height * 0.20f),
+                radius = size.width * 0.72f,
+            ),
+            radius = size.width * 0.72f,
+            center = Offset(size.width * 0.68f, size.height * 0.20f),
+        )
         return
     }
     if (scene.lightningIntensity != WeatherLightningIntensity.None) {
         drawRect(Color(0xFF071426).copy(alpha = 0.48f), size = size)
-        if (lightningFlash > 0f) {
+        val visibility = lightningVisibility(lightningFlash)
+        if (visibility > 0f) {
             drawRect(
-                Color(0xFFDDEBFF).copy(alpha = lightningFlash * 0.16f),
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFE7F1FF).copy(alpha = visibility * 0.065f),
+                        Color(0xFFD5E8FF).copy(alpha = visibility * 0.035f),
+                        Color.Transparent,
+                    ),
+                    endY = size.height * 0.58f,
+                ),
                 size = size,
             )
         }
@@ -487,9 +805,14 @@ internal fun DrawScope.drawWeatherThumbnailScene(
     val height = size.height
 
     if (scene.atmosphere == WeatherAtmosphere.Fog) {
-        drawRect(Color(0xFFB4C0C9).copy(alpha = 0.48f), size = size)
-        drawFog(width, height, motionProgress = 0.35f)
+        drawRect(Color(0xFFB4C0C9).copy(alpha = 0.34f), size = size)
         drawWeatherPhotoOverlays(style)
+        drawFog(
+            width = width,
+            height = height,
+            motionProgress = 0.35f,
+            isDaytime = scene.skyPhase == WeatherSkyPhase.Day,
+        )
         return
     }
 
@@ -607,6 +930,127 @@ private fun DrawScope.drawCloud(
     drawCircle(color = color, radius = 28.dp.toPx() * scale, center = center.copy(x = center.x + 48.dp.toPx() * scale))
 }
 
+internal data class RainVisualStyle(
+    val dropCount: Int,
+    val lengthDp: Float,
+    val alpha: Float,
+    val veilAlpha: Float,
+)
+
+internal data class RainLayerSpec(
+    val countFraction: Float,
+    val lengthScale: Float,
+    val strokeWidthDp: Float,
+    val alphaScale: Float,
+    val fallCycles: Int,
+)
+
+internal data class RainPatternStyle(
+    val countScale: Float,
+    val lengthScale: Float,
+    val alphaScale: Float,
+    val veilScale: Float,
+    val pulseMin: Float,
+    val pulseMax: Float,
+)
+
+internal val rainLayerSpecs = listOf(
+    RainLayerSpec(0.50f, 0.38f, 0.38f, 0.56f, 1),
+    RainLayerSpec(0.33f, 0.68f, 0.62f, 0.80f, 2),
+    RainLayerSpec(0.17f, 1.00f, 0.96f, 1.00f, 3),
+)
+
+internal fun rainVisualStyle(
+    intensity: WeatherIntensity,
+    drizzle: Boolean,
+): RainVisualStyle {
+    return when (intensity) {
+        WeatherIntensity.None -> RainVisualStyle(
+            dropCount = 0,
+            lengthDp = 0f,
+            alpha = 0f,
+            veilAlpha = 0f,
+        )
+        WeatherIntensity.Light -> if (drizzle) {
+            RainVisualStyle(
+                dropCount = 120,
+                lengthDp = 7f,
+                alpha = 0.38f,
+                veilAlpha = 0.008f,
+            )
+        } else {
+            RainVisualStyle(
+                dropCount = 145,
+                lengthDp = 12.5f,
+                alpha = 0.45f,
+                veilAlpha = 0.014f,
+            )
+        }
+        WeatherIntensity.Moderate -> RainVisualStyle(
+            dropCount = 205,
+            lengthDp = 17f,
+            alpha = 0.55f,
+            veilAlpha = 0.026f,
+        )
+        WeatherIntensity.Heavy -> RainVisualStyle(
+            dropCount = 280,
+            lengthDp = 22f,
+            alpha = 0.65f,
+            veilAlpha = 0.044f,
+        )
+    }
+}
+
+internal fun rainPatternStyle(
+    intensity: WeatherIntensity,
+    pattern: WeatherPrecipitationPattern,
+    windLevel: WeatherWindLevel,
+): RainPatternStyle {
+    if (pattern != WeatherPrecipitationPattern.Showers) {
+        return RainPatternStyle(
+            countScale = 1f,
+            lengthScale = 1f,
+            alphaScale = 1f,
+            veilScale = 1f,
+            pulseMin = 1f,
+            pulseMax = 1f,
+        )
+    }
+    return when {
+        intensity == WeatherIntensity.Heavy && windLevel == WeatherWindLevel.Windy -> RainPatternStyle(
+            countScale = 1.48f,
+            lengthScale = 1.24f,
+            alphaScale = 1.18f,
+            veilScale = 1.90f,
+            pulseMin = 1.00f,
+            pulseMax = 1.32f,
+        )
+        intensity == WeatherIntensity.Heavy -> RainPatternStyle(
+            countScale = 1.20f,
+            lengthScale = 1.10f,
+            alphaScale = 1.08f,
+            veilScale = 1.40f,
+            pulseMin = 0.94f,
+            pulseMax = 1.18f,
+        )
+        else -> RainPatternStyle(
+            countScale = 1f,
+            lengthScale = 1f,
+            alphaScale = 1f,
+            veilScale = 1.08f,
+            pulseMin = 0.88f,
+            pulseMax = 1.10f,
+        )
+    }
+}
+
+internal fun rainNoise(index: Int, salt: Int): Float {
+    var value = index * 0x45D9F3B + salt * 0x27D4EB2D
+    value = (value xor (value ushr 16)) * 0x45D9F3B
+    value = value xor (value ushr 16)
+    return (value and Int.MAX_VALUE) / Int.MAX_VALUE.toFloat()
+}
+
 private fun DrawScope.drawRain(
     width: Float,
     height: Float,
@@ -616,67 +1060,176 @@ private fun DrawScope.drawRain(
     motionProgress: Float,
     drizzle: Boolean = false,
     freezing: Boolean = false,
+    isDaytime: Boolean,
 ) {
-    val baseCount = when (intensity) {
-        WeatherIntensity.None -> 0
-        WeatherIntensity.Light -> if (drizzle) 18 else 24
-        WeatherIntensity.Moderate -> 40
-        WeatherIntensity.Heavy -> 62
-    }
-    val count = if (pattern == WeatherPrecipitationPattern.Showers) {
-        (baseCount * 0.86f).toInt()
-    } else {
-        baseCount
-    }
-    val length = when {
-        drizzle -> 10.dp.toPx()
-        intensity == WeatherIntensity.Heavy -> 31.dp.toPx()
-        intensity == WeatherIntensity.Light -> 18.dp.toPx()
-        else -> 24.dp.toPx()
-    }
-    val strokeWidth = when {
-        drizzle -> 0.9.dp.toPx()
-        intensity == WeatherIntensity.Heavy -> 1.8.dp.toPx()
-        else -> 1.35.dp.toPx()
-    }
-    val alpha = when (intensity) {
-        WeatherIntensity.None -> 0f
-        WeatherIntensity.Light -> 0.30f
-        WeatherIntensity.Moderate -> 0.42f
-        WeatherIntensity.Heavy -> 0.54f
-    }
-    val safeWidth = width.toInt().coerceAtLeast(1)
-    val travelHeight = height + length * 2f
+    val style = rainVisualStyle(intensity = intensity, drizzle = drizzle)
+    if (style.dropCount == 0) return
+
+    val patternStyle = rainPatternStyle(
+        intensity = intensity,
+        pattern = pattern,
+        windLevel = windLevel,
+    )
     val showerPulse = if (pattern == WeatherPrecipitationPattern.Showers) {
-        0.58f + 0.42f * ((sin(motionProgress * PI * 2.0).toFloat() + 1f) / 2f)
+        val pulseProgress = (sin(motionProgress * PI * 2.0).toFloat() + 1f) / 2f
+        patternStyle.pulseMin + (patternStyle.pulseMax - patternStyle.pulseMin) * pulseProgress
     } else {
         1f
     }
-    val slant = when (windLevel) {
-        WeatherWindLevel.Calm -> 0.26f
-        WeatherWindLevel.Breezy -> 0.48f
-        WeatherWindLevel.Windy -> 0.74f
+    val baseSkew = when (windLevel) {
+        WeatherWindLevel.Calm -> 0.06f
+        WeatherWindLevel.Breezy -> 0.16f
+        WeatherWindLevel.Windy -> 0.28f
     }
-    repeat(count) { index ->
-        if (pattern == WeatherPrecipitationPattern.Showers && (index * 37) % 10 >= 8) {
-            return@repeat
+    val rainColor = when {
+        freezing -> Color(0xFFE7F7FF)
+        isDaytime -> Color(0xFFD5E7F1)
+        else -> Color(0xFFAAC8D9)
+    }
+
+    drawRect(
+        brush = Brush.verticalGradient(
+            colorStops = arrayOf(
+                0f to Color.Transparent,
+                0.42f to rainColor.copy(
+                    alpha = style.veilAlpha * patternStyle.veilScale * showerPulse * 0.48f,
+                ),
+                1f to rainColor.copy(
+                    alpha = style.veilAlpha * patternStyle.veilScale * showerPulse,
+                ),
+            ),
+            startY = 0f,
+            endY = height,
+        ),
+        size = Size(width, height),
+    )
+
+    rainLayerSpecs.forEachIndexed { layerIndex, layer ->
+        val count = (style.dropCount * patternStyle.countScale * layer.countFraction).roundToInt()
+        val baseLength = style.lengthDp.dp.toPx() * patternStyle.lengthScale * layer.lengthScale
+        val maxLength = baseLength * 1.20f
+        val travelHeight = height + maxLength * 2f
+        val horizontalPadding = maxLength * 2f
+        val travelWidth = width + horizontalPadding * 2f
+
+        repeat(count) { dropIndex ->
+            val noiseIndex = layerIndex * 1_000 + dropIndex
+            val initialPhase = rainNoise(noiseIndex, 17)
+            val fallProgress = (initialPhase + motionProgress * layer.fallCycles) % 1f
+            val length = baseLength * (0.72f + rainNoise(noiseIndex, 31) * 0.48f)
+            val skew = baseSkew * (0.86f + rainNoise(noiseIndex, 47) * 0.28f)
+            val baseX = rainNoise(noiseIndex, 71) * travelWidth - horizontalPadding
+            val rawX = baseX - fallProgress * height * skew
+            val x = ((rawX + horizontalPadding) % travelWidth + travelWidth) % travelWidth - horizontalPadding
+            val y = fallProgress * travelHeight - maxLength
+            val strokeWidth = layer.strokeWidthDp.dp.toPx() *
+                (0.84f + rainNoise(noiseIndex, 89) * 0.30f)
+            val dropAlpha = style.alpha * patternStyle.alphaScale * layer.alphaScale * showerPulse *
+                (0.72f + rainNoise(noiseIndex, 107) * 0.28f)
+            val start = Offset(x, y)
+            val end = Offset(x - length * skew, y + length)
+
+            drawLine(
+                color = rainColor.copy(alpha = dropAlpha * 0.78f),
+                start = start,
+                end = end,
+                strokeWidth = strokeWidth,
+                cap = StrokeCap.Round,
+            )
+
+            if (layerIndex == rainLayerSpecs.lastIndex && dropIndex % 2 == 0) {
+                val headStart = Offset(
+                    x = start.x + (end.x - start.x) * 0.62f,
+                    y = start.y + (end.y - start.y) * 0.62f,
+                )
+                drawLine(
+                    color = rainColor.copy(alpha = dropAlpha * 0.40f),
+                    start = headStart,
+                    end = end,
+                    strokeWidth = strokeWidth * 0.58f,
+                    cap = StrokeCap.Round,
+                )
+            }
         }
-        val speedVariance = 0.88f + (index % 4) * 0.06f
-        val startY = ((index * 97) % travelHeight.toInt().coerceAtLeast(1)).toFloat()
-        val y = (startY + motionProgress * travelHeight * speedVariance) % travelHeight - length
-        val windShift = motionProgress * width * when (windLevel) {
-            WeatherWindLevel.Calm -> 0.01f
-            WeatherWindLevel.Breezy -> 0.035f
-            WeatherWindLevel.Windy -> 0.07f
-        }
-        val x = (((index * 41) % safeWidth).toFloat() - windShift + width) % width
-        drawLine(
-            color = (if (freezing) Color(0xFFE5F7FF) else Color(0xFFC7EAFF))
-                .copy(alpha = alpha * showerPulse),
-            start = Offset(x, y),
-            end = Offset(x - length * slant, y + length),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
+    }
+}
+
+internal data class SnowVisualStyle(
+    val flakeCount: Int,
+    val minRadiusDp: Float,
+    val maxRadiusDp: Float,
+    val alpha: Float,
+    val veilAlpha: Float,
+)
+
+internal data class SnowLayerSpec(
+    val countFraction: Float,
+    val radiusScale: Float,
+    val alphaScale: Float,
+    val fallScale: Float,
+    val driftScale: Float,
+)
+
+internal data class SnowPatternStyle(
+    val countScale: Float,
+    val radiusScale: Float,
+    val alphaScale: Float,
+    val veilScale: Float,
+    val driftScale: Float,
+    val pulseMin: Float,
+    val pulseMax: Float,
+)
+
+internal val snowLayerSpecs = listOf(
+    SnowLayerSpec(0.52f, 0.62f, 0.54f, 0.72f, 0.68f),
+    SnowLayerSpec(0.32f, 0.88f, 0.78f, 0.96f, 0.94f),
+    SnowLayerSpec(0.16f, 1.18f, 1.00f, 1.22f, 1.24f),
+)
+
+internal fun snowVisualStyle(intensity: WeatherIntensity): SnowVisualStyle {
+    return when (intensity) {
+        WeatherIntensity.None -> SnowVisualStyle(0, 0f, 0f, 0f, 0f)
+        WeatherIntensity.Light -> SnowVisualStyle(78, 0.95f, 2.4f, 0.64f, 0.012f)
+        WeatherIntensity.Moderate -> SnowVisualStyle(138, 1.05f, 3.0f, 0.74f, 0.025f)
+        WeatherIntensity.Heavy -> SnowVisualStyle(220, 1.15f, 3.5f, 0.84f, 0.046f)
+    }
+}
+
+internal fun snowPatternStyle(
+    intensity: WeatherIntensity,
+    pattern: WeatherPrecipitationPattern,
+    windLevel: WeatherWindLevel,
+): SnowPatternStyle {
+    if (pattern != WeatherPrecipitationPattern.Flurries) {
+        return SnowPatternStyle(1f, 1f, 1f, 1f, 1f, 1f, 1f)
+    }
+    return when {
+        intensity == WeatherIntensity.Heavy && windLevel == WeatherWindLevel.Windy -> SnowPatternStyle(
+            countScale = 1.45f,
+            radiusScale = 1.12f,
+            alphaScale = 1.14f,
+            veilScale = 1.80f,
+            driftScale = 1.45f,
+            pulseMin = 0.96f,
+            pulseMax = 1.30f,
+        )
+        intensity == WeatherIntensity.Heavy -> SnowPatternStyle(
+            countScale = 1.28f,
+            radiusScale = 1.08f,
+            alphaScale = 1.08f,
+            veilScale = 1.45f,
+            driftScale = 1.25f,
+            pulseMin = 0.90f,
+            pulseMax = 1.22f,
+        )
+        else -> SnowPatternStyle(
+            countScale = 1.12f,
+            radiusScale = 1.04f,
+            alphaScale = 1.04f,
+            veilScale = 1.22f,
+            driftScale = 1.15f,
+            pulseMin = 0.84f,
+            pulseMax = 1.14f,
         )
     }
 }
@@ -689,39 +1242,105 @@ private fun DrawScope.drawSnow(
     windLevel: WeatherWindLevel,
     motionProgress: Float,
 ) {
-    val count = when (intensity) {
-        WeatherIntensity.None -> 0
-        WeatherIntensity.Light -> 22
-        WeatherIntensity.Moderate -> 38
-        WeatherIntensity.Heavy -> 58
-    }
-    val safeWidth = width.toInt().coerceAtLeast(1)
-    val safeHeight = height.toInt().coerceAtLeast(1)
+    val style = snowVisualStyle(intensity)
+    if (style.flakeCount == 0) return
+
+    val patternStyle = snowPatternStyle(
+        intensity = intensity,
+        pattern = pattern,
+        windLevel = windLevel,
+    )
     val windAmplitude = when (windLevel) {
-        WeatherWindLevel.Calm -> 8.dp.toPx()
-        WeatherWindLevel.Breezy -> 20.dp.toPx()
-        WeatherWindLevel.Windy -> 38.dp.toPx()
+        WeatherWindLevel.Calm -> 10.dp.toPx()
+        WeatherWindLevel.Breezy -> 28.dp.toPx()
+        WeatherWindLevel.Windy -> 52.dp.toPx()
     }
-    val showerPulse = if (pattern == WeatherPrecipitationPattern.Flurries) {
-        0.66f + 0.34f * ((sin(motionProgress * PI * 2.0).toFloat() + 1f) / 2f)
+    val directionalDrift = when (windLevel) {
+        WeatherWindLevel.Calm -> width * 0.012f
+        WeatherWindLevel.Breezy -> width * 0.070f
+        WeatherWindLevel.Windy -> width * 0.155f
+    }
+    val flurryPulse = if (pattern == WeatherPrecipitationPattern.Flurries) {
+        val pulseProgress = (sin(motionProgress * PI * 2.0).toFloat() + 1f) / 2f
+        patternStyle.pulseMin + (patternStyle.pulseMax - patternStyle.pulseMin) * pulseProgress
     } else {
         1f
     }
-    repeat(count) { index ->
-        val baseX = ((index * 53) % safeWidth).toFloat()
-        val baseY = ((index * 89) % safeHeight).toFloat()
-        val fallProgress = (motionProgress * (0.72f + (index % 5) * 0.07f)) % 1f
-        val y = (baseY + fallProgress * height) % height
-        val drift = sin((motionProgress * PI * 2.0) + index * 0.73).toFloat() * windAmplitude
-        val directionalShift = motionProgress * windAmplitude * if (windLevel == WeatherWindLevel.Windy) 1.8f else 0.7f
-        val x = (baseX + drift - directionalShift + width) % width
-        drawCircle(
-            color = Color.White.copy(
-                alpha = (if (intensity == WeatherIntensity.Heavy) 0.68f else 0.54f) * showerPulse,
+
+    drawRect(
+        brush = Brush.verticalGradient(
+            colorStops = arrayOf(
+                0f to Color.Transparent,
+                0.46f to Color.White.copy(
+                    alpha = style.veilAlpha * patternStyle.veilScale * flurryPulse * 0.40f,
+                ),
+                1f to Color.White.copy(
+                    alpha = style.veilAlpha * patternStyle.veilScale * flurryPulse,
+                ),
             ),
-            radius = (1.5f + (index % 3)).dp.toPx(),
-            center = Offset(x, y),
-        )
+            startY = 0f,
+            endY = height,
+        ),
+        size = Size(width, height),
+    )
+
+    snowLayerSpecs.forEachIndexed { layerIndex, layer ->
+        val count = (style.flakeCount * patternStyle.countScale * layer.countFraction).roundToInt()
+        val maxRadius = style.maxRadiusDp.dp.toPx() * patternStyle.radiusScale * layer.radiusScale
+        val travelHeight = height + maxRadius * 4f
+        val horizontalPadding = maxRadius * 4f + windAmplitude
+        val travelWidth = width + horizontalPadding * 2f
+
+        repeat(count) { flakeIndex ->
+            val noiseIndex = layerIndex * 1_000 + flakeIndex
+            val initialPhase = rainNoise(noiseIndex, 211)
+            val fallProgress = (initialPhase + motionProgress * layer.fallScale) % 1f
+            val baseX = rainNoise(noiseIndex, 223) * travelWidth - horizontalPadding
+            val swayFrequency = 0.62f + rainNoise(noiseIndex, 239) * 0.72f
+            val swayPhase = rainNoise(noiseIndex, 251) * PI.toFloat() * 2f
+            val sway = sin(
+                motionProgress * PI.toFloat() * 2f * swayFrequency + swayPhase,
+            ) * windAmplitude * patternStyle.driftScale * layer.driftScale
+            val rawX = baseX + sway - fallProgress * directionalDrift * patternStyle.driftScale * layer.driftScale
+            val x = ((rawX + horizontalPadding) % travelWidth + travelWidth) % travelWidth - horizontalPadding
+            val y = fallProgress * travelHeight - maxRadius * 2f
+            val radiusNoise = rainNoise(noiseIndex, 269)
+            val radiusDp = style.minRadiusDp + (style.maxRadiusDp - style.minRadiusDp) * radiusNoise
+            val radius = radiusDp.dp.toPx() * patternStyle.radiusScale * layer.radiusScale
+            val alpha = (
+                style.alpha * patternStyle.alphaScale * layer.alphaScale * flurryPulse *
+                    (0.78f + rainNoise(noiseIndex, 281) * 0.22f)
+                ).coerceIn(0f, 1f)
+
+            if (layerIndex == snowLayerSpecs.lastIndex) {
+                drawCircle(
+                    color = Color(0xFFDFF4FF).copy(alpha = alpha * 0.16f),
+                    radius = radius * 1.85f,
+                    center = Offset(x, y),
+                )
+            }
+            drawCircle(
+                color = Color.White.copy(alpha = alpha),
+                radius = radius,
+                center = Offset(x, y),
+            )
+            if (layerIndex == snowLayerSpecs.lastIndex && flakeIndex % 3 == 0) {
+                drawCircle(
+                    color = Color.White.copy(alpha = alpha * 0.72f),
+                    radius = radius * 0.42f,
+                    center = Offset(x - radius * 0.22f, y - radius * 0.22f),
+                )
+            }
+        }
+    }
+}
+
+internal fun snowGrainCount(intensity: WeatherIntensity): Int {
+    return when (intensity) {
+        WeatherIntensity.None -> 0
+        WeatherIntensity.Light -> 96
+        WeatherIntensity.Moderate -> 136
+        WeatherIntensity.Heavy -> 182
     }
 }
 
@@ -732,23 +1351,35 @@ private fun DrawScope.drawSnowGrains(
     windLevel: WeatherWindLevel,
     motionProgress: Float,
 ) {
-    val count = when (intensity) {
-        WeatherIntensity.None -> 0
-        WeatherIntensity.Light -> 28
-        WeatherIntensity.Moderate -> 42
-        WeatherIntensity.Heavy -> 56
-    }
+    val count = snowGrainCount(intensity)
+    if (count == 0) return
     val windShift = when (windLevel) {
-        WeatherWindLevel.Calm -> width * 0.01f
-        WeatherWindLevel.Breezy -> width * 0.04f
-        WeatherWindLevel.Windy -> width * 0.08f
+        WeatherWindLevel.Calm -> width * 0.025f
+        WeatherWindLevel.Breezy -> width * 0.095f
+        WeatherWindLevel.Windy -> width * 0.18f
     }
     repeat(count) { index ->
-        val x = (((index * 71) % width.toInt().coerceAtLeast(1)).toFloat() - motionProgress * windShift + width) % width
-        val y = (((index * 113) % height.toInt().coerceAtLeast(1)).toFloat() + motionProgress * height) % height
+        val depth = 0.48f + rainNoise(index, 307) * 0.52f
+        val initialPhase = rainNoise(index, 311)
+        val fallProgress = (initialPhase + motionProgress * (0.86f + depth * 0.72f)) % 1f
+        val baseX = rainNoise(index, 313) * width
+        val flutter = sin(
+            motionProgress * PI.toFloat() * 2f + rainNoise(index, 317) * PI.toFloat() * 2f,
+        ) * 9.dp.toPx() * depth
+        val rawX = baseX + flutter - fallProgress * windShift * depth
+        val x = (rawX % width + width) % width
+        val y = fallProgress * height
+        val radius = (0.72f + rainNoise(index, 331) * 0.92f).dp.toPx() * depth
+        val alpha = 0.42f + depth * 0.36f
+
         drawCircle(
-            color = Color(0xFFF4FAFF).copy(alpha = 0.64f),
-            radius = (0.9f + (index % 2) * 0.45f).dp.toPx(),
+            color = Color(0xFFE7F7FF).copy(alpha = alpha * 0.18f),
+            radius = radius * 1.65f,
+            center = Offset(x, y),
+        )
+        drawCircle(
+            color = Color(0xFFF7FCFF).copy(alpha = alpha),
+            radius = radius,
             center = Offset(x, y),
         )
     }
@@ -771,6 +1402,7 @@ private fun DrawScope.drawPrecipitation(
             motionProgress = motionProgress,
             drizzle = true,
             freezing = scene.freezing,
+            isDaytime = scene.skyPhase == WeatherSkyPhase.Day,
         )
         WeatherPrecipitation.Rain -> drawRain(
             width = width,
@@ -780,6 +1412,7 @@ private fun DrawScope.drawPrecipitation(
             windLevel = scene.windLevel,
             motionProgress = motionProgress,
             freezing = scene.freezing,
+            isDaytime = scene.skyPhase == WeatherSkyPhase.Day,
         )
         WeatherPrecipitation.Snow -> drawSnow(
             width = width,
@@ -805,12 +1438,14 @@ private fun DrawScope.drawPrecipitation(
                 windLevel = scene.windLevel,
                 motionProgress = motionProgress,
                 freezing = true,
+                isDaytime = scene.skyPhase == WeatherSkyPhase.Day,
             )
             drawIceParticles(
                 width = width,
                 height = height,
                 intensity = scene.precipitationIntensity,
                 isHail = false,
+                windLevel = scene.windLevel,
                 motionProgress = motionProgress,
             )
         }
@@ -822,16 +1457,31 @@ private fun DrawScope.drawPrecipitation(
                 pattern = WeatherPrecipitationPattern.Showers,
                 windLevel = scene.windLevel,
                 motionProgress = motionProgress,
+                isDaytime = scene.skyPhase == WeatherSkyPhase.Day,
             )
             drawIceParticles(
                 width = width,
                 height = height,
                 intensity = WeatherIntensity.Heavy,
                 isHail = true,
+                windLevel = scene.windLevel,
                 motionProgress = motionProgress,
             )
         }
     }
+}
+
+internal fun iceParticleCount(
+    intensity: WeatherIntensity,
+    isHail: Boolean,
+): Int {
+    val base = when (intensity) {
+        WeatherIntensity.None -> 0
+        WeatherIntensity.Light -> 30
+        WeatherIntensity.Moderate -> 54
+        WeatherIntensity.Heavy -> 84
+    }
+    return if (isHail) (base * 1.22f).roundToInt() else base
 }
 
 private fun DrawScope.drawIceParticles(
@@ -839,55 +1489,165 @@ private fun DrawScope.drawIceParticles(
     height: Float,
     intensity: WeatherIntensity,
     isHail: Boolean,
+    windLevel: WeatherWindLevel,
     motionProgress: Float,
 ) {
-    val count = when (intensity) {
-        WeatherIntensity.None -> 0
-        WeatherIntensity.Light -> 12
-        WeatherIntensity.Moderate -> 20
-        WeatherIntensity.Heavy -> 32
+    val count = iceParticleCount(intensity = intensity, isHail = isHail)
+    if (count == 0) return
+    val windShift = when (windLevel) {
+        WeatherWindLevel.Calm -> width * 0.025f
+        WeatherWindLevel.Breezy -> width * 0.090f
+        WeatherWindLevel.Windy -> width * 0.180f
     }
-    val safeWidth = width.toInt().coerceAtLeast(1)
-    val safeHeight = height.toInt().coerceAtLeast(1)
     repeat(count) { index ->
-        val x = ((index * 67 + 23) % safeWidth).toFloat()
-        val startY = ((index * 109 + 37) % safeHeight).toFloat()
-        val y = (startY + motionProgress * height * if (isHail) 1.45f else 0.9f) % height
-        val radius = if (isHail) {
-            (2.2f + (index % 2)).dp.toPx()
+        val depth = 0.52f + rainNoise(index, 347) * 0.48f
+        val initialPhase = rainNoise(index, 349)
+        val fallScale = if (isHail) 1.25f + depth * 0.72f else 0.88f + depth * 0.48f
+        val fallProgress = (initialPhase + motionProgress * fallScale) % 1f
+        val baseX = rainNoise(index, 353) * width
+        val rawX = baseX - fallProgress * windShift * depth
+        val x = (rawX % width + width) % width
+        val y = fallProgress * height
+        val radiusDp = if (isHail) {
+            2.2f + rainNoise(index, 359) * 2.4f
         } else {
-            (1.2f + (index % 2)).dp.toPx()
+            1.0f + rainNoise(index, 359) * 1.45f
+        }
+        val radius = radiusDp.dp.toPx() * depth
+        val center = Offset(x, y)
+
+        if (isHail) {
+            drawLine(
+                color = Color(0xFFD5F1FF).copy(alpha = 0.34f),
+                start = center.copy(
+                    x = x + radius * 0.72f,
+                    y = y - radius * 3.1f,
+                ),
+                end = center.copy(
+                    x = x + radius * 0.18f,
+                    y = y - radius * 0.82f,
+                ),
+                strokeWidth = radius * 0.42f,
+                cap = StrokeCap.Round,
+            )
         }
         drawCircle(
-            color = Color(0xFFEAF7FF).copy(alpha = if (isHail) 0.82f else 0.62f),
-            radius = radius,
-            center = Offset(x, y),
+            color = Color(0xFFBDEBFF).copy(alpha = if (isHail) 0.10f else 0.11f),
+            radius = radius * if (isHail) 1.32f else 1.48f,
+            center = center,
         )
+        drawCircle(
+            color = Color(0xFFEAF7FF).copy(alpha = if (isHail) 0.90f else 0.72f),
+            radius = radius,
+            center = center,
+        )
+        if (isHail) {
+            drawCircle(
+                color = Color.White.copy(alpha = 0.82f),
+                radius = radius * 0.34f,
+                center = center.copy(x = x - radius * 0.28f, y = y - radius * 0.28f),
+            )
+        }
     }
 }
+
+internal data class FogBankSpec(
+    val centerXFraction: Float,
+    val centerYFraction: Float,
+    val widthFraction: Float,
+    val heightFraction: Float,
+    val alpha: Float,
+    val driftFraction: Float,
+    val direction: Float,
+    val phaseOffset: Float,
+)
+
+internal val fogBankSpecs = listOf(
+    FogBankSpec(0.32f, 0.15f, 0.90f, 0.075f, 0.085f, 0.026f, 1f, 0.04f),
+    FogBankSpec(0.58f, 0.28f, 1.24f, 0.115f, 0.120f, 0.018f, -1f, 0.26f),
+    FogBankSpec(0.72f, 0.44f, 0.82f, 0.090f, 0.078f, 0.034f, 1f, 0.51f),
+    FogBankSpec(0.43f, 0.61f, 1.42f, 0.155f, 0.135f, 0.022f, -1f, 0.70f),
+    FogBankSpec(0.64f, 0.82f, 1.08f, 0.205f, 0.115f, 0.014f, 1f, 0.88f),
+)
+
+internal val fogOpacityProfile = listOf(
+    0f to 1f,
+    0.38f to 0.62f,
+    0.72f to 0.16f,
+    1f to 0f,
+)
 
 private fun DrawScope.drawFog(
     width: Float,
     height: Float,
     motionProgress: Float,
+    isDaytime: Boolean,
 ) {
-    val bandHeight = height * 0.12f
-    listOf(0.16f, 0.30f, 0.47f, 0.66f, 0.84f).forEachIndexed { index, fraction ->
-        val alpha = if (index % 2 == 0) 0.18f else 0.13f
-        drawOval(
-            brush = Brush.horizontalGradient(
-                colors = listOf(
-                    Color.Transparent,
-                    Color(0xFFF4F7F8).copy(alpha = alpha),
-                    Color(0xFFE9EEF1).copy(alpha = alpha + 0.04f),
-                    Color.Transparent,
-                ),
+    val primaryTint = if (isDaytime) Color(0xFFF1F4F4) else Color(0xFFB9C6CD)
+    val secondaryTint = if (isDaytime) Color(0xFFD5DEE1) else Color(0xFF8397A2)
+
+    drawRect(
+        brush = Brush.verticalGradient(
+            colors = listOf(
+                Color.Transparent,
+                primaryTint.copy(alpha = if (isDaytime) 0.035f else 0.020f),
+                secondaryTint.copy(alpha = if (isDaytime) 0.105f else 0.070f),
             ),
-            topLeft = Offset(
-                x = -width * 0.18f + (motionProgress * 2f - 1f) * width * 0.035f * if (index % 2 == 0) 1f else -1f,
-                y = height * fraction,
+            startY = height * 0.45f,
+            endY = height,
+        ),
+        topLeft = Offset(0f, height * 0.45f),
+        size = Size(width, height * 0.55f),
+    )
+
+    fogBankSpecs.forEach { bank ->
+        val movement = sin((motionProgress + bank.phaseOffset) * 2f * PI.toFloat()) *
+            width * bank.driftFraction * bank.direction
+        val bankWidth = width * bank.widthFraction
+        val bankHeight = height * bank.heightFraction
+        val center = Offset(
+            x = width * bank.centerXFraction + movement,
+            y = height * bank.centerYFraction,
+        )
+
+        drawSoftFogBank(
+            center = center,
+            width = bankWidth,
+            height = bankHeight,
+            tint = primaryTint,
+            alpha = bank.alpha,
+        )
+    }
+}
+
+private fun DrawScope.drawSoftFogBank(
+    center: Offset,
+    width: Float,
+    height: Float,
+    tint: Color,
+    alpha: Float,
+) {
+    val radius = width * 0.5f
+    val verticalScale = (height / width).coerceAtLeast(0.01f)
+    val colorStops = fogOpacityProfile.map { (position, alphaMultiplier) ->
+        position to tint.copy(alpha = alpha * alphaMultiplier)
+    }.toTypedArray()
+
+    withTransform({
+        scale(
+            scaleX = 1f,
+            scaleY = verticalScale,
+            pivot = center,
+        )
+    }) {
+        drawCircle(
+            brush = Brush.radialGradient(
+                colorStops = colorStops,
+                center = center,
+                radius = radius,
             ),
-            size = Size(width * 1.36f, bandHeight),
+            center = center,
+            radius = radius,
         )
     }
 }
@@ -896,33 +1656,107 @@ private fun DrawScope.drawThunderstorm(
     width: Float,
     height: Float,
     flash: Float,
+    strikeIndex: Int = 2,
 ) {
-    val origin = Offset(width * 0.78f, height * 0.14f)
+    val visibility = lightningVisibility(flash)
+    if (visibility <= 0f) return
+
+    val strike = lightningStrikeSpecs[strikeIndex.coerceIn(0, lightningStrikeSpecs.lastIndex)]
+    val brightness = (visibility * strike.brightnessScale).coerceAtMost(1f)
+    val origin = Offset(
+        x = width * strike.originXFraction,
+        y = height * strike.originYFraction,
+    )
+    val glowRadius = width * 0.30f * strike.glowScale
+    val glowCenter = origin.copy(y = origin.y + height * 0.045f)
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
-                Color(0xFFE8F1FF).copy(alpha = 0.08f + flash * 0.20f),
+                Color(0xFFE9F3FF).copy(alpha = brightness * 0.18f),
+                Color(0xFFB8D7FF).copy(alpha = brightness * 0.065f),
                 Color.Transparent,
             ),
-            center = origin,
-            radius = width * 0.24f,
+            center = glowCenter,
+            radius = glowRadius,
         ),
-        radius = width * 0.24f,
-        center = origin,
+        radius = glowRadius,
+        center = glowCenter,
     )
-    val bolt = Path().apply {
-        moveTo(origin.x + width * 0.03f, origin.y)
-        lineTo(origin.x - width * 0.025f, origin.y + height * 0.055f)
-        lineTo(origin.x + width * 0.012f, origin.y + height * 0.055f)
-        lineTo(origin.x - width * 0.038f, origin.y + height * 0.13f)
-        lineTo(origin.x + width * 0.06f, origin.y + height * 0.035f)
-        lineTo(origin.x + width * 0.018f, origin.y + height * 0.036f)
-        close()
+
+    val mainBolt = lightningPath(origin, width, height, strike.mainPath)
+    val branches = strike.branchPaths.map { points ->
+        lightningPath(origin, width, height, points)
     }
-    drawPath(bolt, Color(0xFFF4E9A8).copy(alpha = 0.08f + flash * 0.42f))
-    drawPath(
-        path = bolt,
-        color = Color(0xFFFFF5BE).copy(alpha = 0.12f + flash * 0.72f),
-        style = Stroke(width = 1.2.dp.toPx(), join = StrokeJoin.Round),
+
+    val roundedGlow = Stroke(
+        width = 6.dp.toPx(),
+        cap = StrokeCap.Round,
+        join = StrokeJoin.Round,
     )
+    val roundedBody = Stroke(
+        width = 2.6.dp.toPx(),
+        cap = StrokeCap.Round,
+        join = StrokeJoin.Round,
+    )
+    val roundedCore = Stroke(
+        width = 0.9.dp.toPx(),
+        cap = StrokeCap.Round,
+        join = StrokeJoin.Round,
+    )
+    drawPath(
+        path = mainBolt,
+        color = Color(0xFFB9D9FF).copy(alpha = brightness * 0.10f),
+        style = roundedGlow,
+    )
+    drawPath(
+        path = mainBolt,
+        color = Color(0xFFE5F2FF).copy(alpha = brightness * 0.56f),
+        style = roundedBody,
+    )
+    drawPath(
+        path = mainBolt,
+        color = Color(0xFFFCFEFF).copy(alpha = brightness * 0.96f),
+        style = roundedCore,
+    )
+    branches.forEachIndexed { index, branch ->
+        val startsAtCloudBase = strike.branchPaths[index].first().yFraction <= 0.001f
+        val branchVisibility = brightness * if (startsAtCloudBase) 0.92f else 0.74f
+        drawPath(
+            path = branch,
+            color = Color(0xFFCAE3FF).copy(alpha = branchVisibility * 0.34f),
+            style = Stroke(
+                width = 2.2.dp.toPx(),
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round,
+            ),
+        )
+        drawPath(
+            path = branch,
+            color = Color(0xFFF7FCFF).copy(alpha = branchVisibility * 0.78f),
+            style = Stroke(
+                width = 0.72.dp.toPx(),
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round,
+            ),
+        )
+    }
+}
+
+private fun lightningPath(
+    origin: Offset,
+    width: Float,
+    height: Float,
+    points: List<LightningPathPoint>,
+): Path {
+    return Path().apply {
+        points.forEachIndexed { index, point ->
+            val x = origin.x + width * point.xFraction
+            val y = origin.y + height * point.yFraction
+            if (index == 0) {
+                moveTo(x, y)
+            } else {
+                lineTo(x, y)
+            }
+        }
+    }
 }
