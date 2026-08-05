@@ -1,19 +1,9 @@
 <resources>
-
-    <style name="AppTheme" parent="BaseAppTheme" />
-
-    <style name="BaseAppTheme" parent="BaseAppTheme.NoActionBar" />
-
-    <style name="BaseAppTheme.NoActionBar" parent="@android:style/Theme.Material.Light.NoActionBar">
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:colorAccent">@color/colorAccent</item>
         <item name="android:navigationBarColor">@android:color/white</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@color/colorPrimary</item>
     </style>
-
-    <style name="LaunchTheme" parent="AppTheme">
-        <item name="android:windowBackground">@drawable/bg_launch_window</item>
-    </style>
-
 </resources>

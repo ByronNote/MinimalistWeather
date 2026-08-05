@@ -1,0 +1,51 @@
+[versions]
+agp = "9.2.0"
+kotlin = "2.3.21"
+ksp = "2.3.9"
+hilt = "2.60.1"
+okhttp = "5.3.0"
+serialization = "1.11.0"
+datastore = "1.2.1"
+activityCompose = "1.13.0"
+composeBom = "2026.06.00"
+lifecycle = "2.10.0"
+workManager = "2.11.2"
+coroutines = "1.10.2"
+junit = "4.13.2"
+compileSdk = "37"
+minSdk = "23"
+targetSdk = "37"
+applicationId = "cn.byronlab.weather"
+versionCode = "1"
+versionName = "1.0"
+
+[libraries]
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
+androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+androidx-compose-runtime = { module = "androidx.compose.runtime:runtime" }
+androidx-compose-ui = { module = "androidx.compose.ui:ui" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "workManager" }
+dagger = { module = "com.google.dagger:dagger", version.ref = "hilt" }
+dagger-compiler = { module = "com.google.dagger:dagger-compiler", version.ref = "hilt" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+junit4 = { module = "junit:junit", version.ref = "junit" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

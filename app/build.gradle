@@ -1,11 +1,13 @@
-apply plugin: 'com.android.application'
-apply plugin: 'org.jetbrains.kotlin.plugin.compose'
-apply plugin: 'com.google.dagger.hilt.android'
-apply plugin: 'com.google.devtools.ksp'
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+}
 
 android {
-    namespace = rootProject.ext.android.applicationId
-    compileSdk rootProject.ext.android.compileSdkVersion
+    namespace = libs.versions.applicationId.get()
+    compileSdk libs.versions.compileSdk.get().toInteger()
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -19,25 +21,17 @@ android {
     }
 
     defaultConfig {
-        applicationId rootProject.ext.android.applicationId
-        minSdk rootProject.ext.android.minSdkVersion
-        targetSdk rootProject.ext.android.targetSdkVersion
-        versionCode rootProject.ext.android.versionCode
-        versionName rootProject.ext.android.versionName
+        applicationId libs.versions.applicationId.get()
+        minSdk libs.versions.minSdk.get().toInteger()
+        targetSdk libs.versions.targetSdk.get().toInteger()
+        versionCode libs.versions.versionCode.get().toInteger()
+        versionName libs.versions.versionName.get()
 
-        vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
-        debug {
-            buildConfigField("boolean", "LOG_DEBUG", "true")
-            buildConfigField 'cn.byronlab.weather.util.StethoHelper', 'STETHO', 'new cn.byronlab.weather.DebugStethoHelper()'
-        }
-
         release {
-            buildConfigField("boolean", "LOG_DEBUG", "false")
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField 'cn.byronlab.weather.util.StethoHelper', 'STETHO', 'new cn.byronlab.weather.util.stetho.ReleaseStethoHelper()'
         }
     }
     buildFeatures {
@@ -47,38 +41,17 @@ android {
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
-    testImplementation 'junit:junit:4.13.2'
-
-    implementation project(':library')
+    implementation project(':presentation')
     implementation project(':domain')
+    implementation project(':data')
 
-    implementation rootProject.ext.dependencies["hilt-android"]
-    ksp rootProject.ext.dependencies["hilt-compiler"]
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
 
-    implementation rootProject.ext.dependencies["retrofit2-fastjson-converter"]
-    implementation rootProject.ext.dependencies["annotation"]
-    implementation rootProject.ext.dependencies["rxjava"]
-    implementation rootProject.ext.dependencies["retrofit"]
-    implementation rootProject.ext.dependencies["adapter-rxjava"]
-    implementation rootProject.ext.dependencies["fastjson"]
-    implementation rootProject.ext.dependencies["okhttp"]
-    implementation rootProject.ext.dependencies["okhttp3-logging-interceptor"]
-    implementation rootProject.ext.dependencies["ormlite-android"]
-    debugImplementation rootProject.ext.dependencies["stetho"]
-    debugImplementation rootProject.ext.dependencies["stetho-okhttp3"]
-    implementation rootProject.ext.dependencies["activity-compose"]
-    implementation platform(rootProject.ext.dependencies["compose-bom"])
-    implementation "androidx.compose.foundation:foundation"
-    implementation "androidx.compose.material3:material3"
-    implementation "androidx.compose.material:material-icons-extended"
-    implementation "androidx.compose.runtime:runtime"
-    implementation "androidx.compose.ui:ui"
-    implementation "androidx.compose.ui:ui-tooling-preview"
-    debugImplementation "androidx.compose.ui:ui-tooling"
-    implementation rootProject.ext.dependencies["lifecycle-runtime-compose"]
-    implementation rootProject.ext.dependencies["lifecycle-runtime-ktx"]
-    implementation rootProject.ext.dependencies["lifecycle-viewmodel-compose"]
-    implementation rootProject.ext.dependencies["lifecycle-viewmodel-ktx"]
-    implementation rootProject.ext.dependencies["kotlinx-coroutines-android"]
+    implementation(libs.okhttp)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.kotlinx.coroutines.android)
 }

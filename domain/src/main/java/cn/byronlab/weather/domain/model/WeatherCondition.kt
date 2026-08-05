@@ -1,0 +1,28 @@
+package cn.byronlab.weather.domain.model
+
+enum class WeatherCondition {
+    Clear,
+    MainlyClear,
+    PartlyCloudy,
+    Cloudy,
+    Overcast,
+    Fog,
+    Drizzle,
+    FreezingDrizzle,
+    LightRain,
+    ModerateRain,
+    HeavyRain,
+    FreezingRain,
+    LightSnow,
+    ModerateSnow,
+    HeavySnow,
+    SnowGrains,
+    RainShowers,
+    HeavyRainShowers,
+    ViolentRainShowers,
+    SnowShowers,
+    HeavySnowShowers,
+    Thunderstorm,
+    ThunderstormWithHail,
+    Unknown,
+}

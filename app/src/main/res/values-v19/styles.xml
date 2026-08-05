@@ -1,8 +1,0 @@
-<resources>
-
-    <style name="BaseAppTheme" parent="BaseAppTheme.NoActionBar">
-        <item name="android:windowTranslucentStatus">true</item>
-        <item name="android:windowTranslucentNavigation">false</item>
-    </style>
-
-</resources>

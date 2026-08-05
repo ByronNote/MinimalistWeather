@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="colorPrimary">#00AD7C</color>
-    <color name="colorPrimaryDark">@color/colorPrimary</color>
     <color name="colorAccent">#FA4659</color>
-
-    <color name="colorForWelcome">@color/colorPrimary</color>
-
-    <color name="lineColor">#E6E6E6</color>
-
-    <color name="textColorDarkerGray">@android:color/darker_gray</color>
+    <color name="ic_launcher_background">#159BEF</color>
 </resources>
