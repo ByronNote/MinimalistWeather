@@ -443,11 +443,19 @@ class HomeViewModel @Inject constructor(
         if (origin != CityPreviewOrigin.Cities) {
             recordRecentCity(cityId)
         }
-        if (state.addedCities.any { it.cityId == cityId }) {
-            selectAddedCity(cityId)
+        val selectedUniqueId = state.findCity(cityId)?.uniqueId ?: cityId
+        val addedCity = state.addedCities.firstOrNull { it.uniqueId == selectedUniqueId }
+        if (addedCity != null) {
+            selectAddedCity(addedCity.cityId)
         } else {
             previewCity(cityId = cityId, origin = origin)
         }
+    }
+
+    private fun HomeUiState.findCity(cityId: String): CityUiModel? {
+        val locationCity = (currentLocation as? CurrentLocationUiState.Available)?.city
+        return (addedCities + recentCities + popularCities + search.searchResults + listOfNotNull(locationCity))
+            .firstOrNull { it.cityId == cityId }
     }
 
     private fun selectAddedCity(cityId: String) {

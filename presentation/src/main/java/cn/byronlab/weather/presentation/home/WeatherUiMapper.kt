@@ -12,6 +12,7 @@ import cn.byronlab.weather.presentation.weatherui.model.WeatherIntensity
 import cn.byronlab.weather.presentation.weatherui.model.WeatherLightningIntensity
 import cn.byronlab.weather.presentation.weatherui.model.WeatherPrecipitation
 import cn.byronlab.weather.presentation.weatherui.model.WeatherPrecipitationPattern
+import cn.byronlab.weather.presentation.weatherui.model.FallbackWeatherScene
 import cn.byronlab.weather.presentation.weatherui.model.WeatherSceneSpec
 import cn.byronlab.weather.presentation.weatherui.model.WeatherSkyPhase
 import cn.byronlab.weather.presentation.weatherui.model.WeatherWindLevel
@@ -30,7 +31,7 @@ class WeatherUiMapper @Inject constructor() {
                 skyPhase = if (it.isDay) WeatherSkyPhase.Day else WeatherSkyPhase.Night,
                 windLevel = it.windSpeed.toWeatherWindLevel(),
             )
-        } ?: WeatherSceneSpec()
+        } ?: FallbackWeatherScene
 
         return WeatherUiModel(
             cityId = city.cityId,
@@ -80,6 +81,7 @@ class WeatherUiMapper @Inject constructor() {
             cityId = city.cityId,
             name = name,
             subtitle = subtitle,
+            uniqueId = city.uniqueId,
         )
     }
 

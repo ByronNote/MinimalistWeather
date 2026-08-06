@@ -48,7 +48,7 @@ active app 当前使用：
 - 天气数据：Open-Meteo Forecast。
 - 空气质量：Open-Meteo Air Quality。
 - 当前城市偏好使用 DataStore Preferences，并通过 `SharedPreferencesMigration` 兼容旧 SharedPreferences 数据。
-- “已添加城市”使用独立 DataStore 列表持久化，并与当前城市、最近访问城市分开管理；浏览城市不会自动加入。
+- “已添加城市”使用独立 DataStore 记录持久化稳定城市唯一标识与天气定位载荷，并与当前城市、最近访问城市分开管理；浏览城市不会自动加入。
 - 当前定位通过 app 层系统 `LocationManager` / `Geocoder` 实现，经 domain 契约映射为 Open-Meteo 可用城市，不与当前选择城市状态混用。
 - 旧 MI/环境云 API、Retrofit/RxJava、ORMLite、FastJson、旧 `city.db` 和 legacy data adapter 已移除。
 
@@ -248,6 +248,13 @@ Phase 1 已建立的基线能力：
 - 天气原始响应缓存由单城市全局键升级为按 city id 分区，保留旧单城市缓存读取兼容；已添加城市启动时并发读取各自缓存，缺失时请求网络并持久化，选择城市页可展示每座城市自己的天气摘要。
 - 选择城市页的已添加城市由多张独立卡片收敛为单一列表容器；每行统一展示城市、地区、天气、当前温度和最高/最低温，当前城市使用轻量底色标识，非当前城市保留对齐的删除入口。
 - 多城市缓存隔离、单城市清理、已添加城市天气状态和热门城市默认展开规则已补充单元测试。
+
+2026-08-06 v6 城市唯一性修复：
+
+- 城市模型新增稳定 `uniqueId`，基于规范化后的国家、行政区和城市名识别同一城市；`cityId` 继续保留完整坐标、时区和显示载荷供天气请求使用。
+- 已添加城市和搜索历史的 DataStore 从 ID 字符串列表升级为 `uniqueId + cityId` 记录，添加、删除、最近访问和旧数据读取均按 `uniqueId` 去重。
+- 保留旧 `saved_city_ids`、`recent_city_ids` 兼容读取；下次写入时自动迁移到 v2 记录，旧数据中的语义重复城市会被归并。
+- 搜索合并、已添加状态标记和已添加城市直达判断统一使用 `uniqueId`，避免定位、本地热门城市和 Open-Meteo 搜索载荷差异导致重复添加。
 
 2026-08-05 Debug 天气 UI 测试台结果：
 

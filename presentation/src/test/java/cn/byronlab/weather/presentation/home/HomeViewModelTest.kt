@@ -202,6 +202,25 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun selectingEquivalentSearchResultUsesAlreadyAddedCityUniqueId() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val fixture = Fixture()
+            val viewModel = fixture.viewModel()
+            advanceUntilIdle()
+
+            viewModel.onEvent(HomeUiEvent.SearchOpened)
+            viewModel.onEvent(HomeUiEvent.SearchQueryChanged("duplicate"))
+            advanceUntilIdle()
+            val equivalentCityId = viewModel.uiState.value.search.searchResults.single().cityId
+
+            viewModel.onEvent(HomeUiEvent.CitySelected(equivalentCityId))
+            advanceUntilIdle()
+
+            assertEquals(null, viewModel.uiState.value.cityPreview)
+            assertEquals("101010100", fixture.settingsRepository.currentCityId)
+        }
+
+    @Test
     fun foregroundRefreshesPeriodicallyAndImmediatelyAfterResume() = runTest(mainDispatcherRule.testDispatcher) {
         val fixture = Fixture()
         val viewModel = fixture.viewModel()
@@ -314,16 +333,18 @@ class HomeViewModelTest {
         var lastSearchKeyword: String? = null
 
         private val availableCities = listOf(
-            city("101010100", "北京"),
-            city("1796236", "上海"),
-            city("2643743", "伦敦"),
+            city("101010100", "北京", uniqueId = "beijing"),
+            city("beijing-alternate-payload", "北京市", uniqueId = "beijing"),
+            city("1796236", "上海", uniqueId = "shanghai"),
+            city("2643743", "伦敦", uniqueId = "london"),
         ).associateBy(City::cityId)
         private val addedCities = MutableStateFlow(listOf(availableCities.getValue("101010100")))
         private var recentCities = emptyList<City>()
 
         override suspend fun searchCities(keyword: String): DomainResult<List<City>> {
             lastSearchKeyword = keyword
-            return DomainResult.success(listOf(availableCities.getValue("101010100")))
+            val cityId = if (keyword == "duplicate") "beijing-alternate-payload" else "101010100"
+            return DomainResult.success(listOf(availableCities.getValue(cityId)))
         }
 
         override suspend fun getPopularCities(): DomainResult<List<City>> {
@@ -331,7 +352,7 @@ class HomeViewModelTest {
         }
 
         override fun resolveLocation(location: DeviceLocation): DomainResult<City> {
-            return DomainResult.success(city("device-location", location.cityName))
+            return DomainResult.success(city("device-location", location.cityName, uniqueId = "shanghai"))
         }
 
         override fun observeAddedCities(): Flow<DomainResult<List<City>>> = addedCities.map { cities ->
@@ -416,8 +437,8 @@ class HomeViewModelTest {
     }
 }
 
-private fun city(cityId: String, name: String): City {
-    return City(cityId, name, name.lowercase(), "", "", "", "")
+private fun city(cityId: String, name: String, uniqueId: String = cityId): City {
+    return City(cityId, name, name.lowercase(), "", "", "", "", uniqueId)
 }
 
 private fun weather(cityId: String): Weather {

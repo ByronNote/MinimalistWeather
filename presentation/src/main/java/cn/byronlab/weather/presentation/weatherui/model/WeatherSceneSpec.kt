@@ -2,6 +2,11 @@ package cn.byronlab.weather.presentation.weatherui.model
 
 import androidx.compose.runtime.Immutable
 
+internal val FallbackWeatherScene = WeatherSceneSpec(
+    cloudCover = WeatherCloudCover.Overcast,
+    atmosphere = WeatherAtmosphere.Neutral,
+)
+
 @Immutable
 data class WeatherSceneSpec(
     val skyPhase: WeatherSkyPhase = WeatherSkyPhase.Day,
@@ -66,6 +71,7 @@ enum class WeatherWindLevel {
 enum class WeatherAtmosphere {
     Clear,
     Fog,
+    Neutral,
 }
 
 internal enum class WeatherVisualType {

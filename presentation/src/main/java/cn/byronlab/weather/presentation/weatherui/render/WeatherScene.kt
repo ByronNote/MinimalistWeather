@@ -499,6 +499,9 @@ internal fun weatherSceneLayers(scene: WeatherSceneSpec): List<WeatherSceneLayer
     if (scene.atmosphere == WeatherAtmosphere.Fog) {
         return emptyList()
     }
+    if (scene.atmosphere == WeatherAtmosphere.Neutral && scene.precipitation == WeatherPrecipitation.None) {
+        return emptyList()
+    }
     if (scene.precipitation != WeatherPrecipitation.None) {
         return precipitationSceneLayers(scene)
     }
@@ -841,9 +844,23 @@ internal fun DrawScope.drawWeatherThumbnailScene(
         }
         WeatherVisualType.Overcast -> {
             drawRect(Color(0xFF3F5268).copy(alpha = 0.28f), size = size)
-            drawCloud(Offset(width * 0.16f, height * 0.22f), 1.24f, Color.White.copy(alpha = 0.46f))
-            drawCloud(Offset(width * 0.74f, height * 0.29f), 1.42f, Color.White.copy(alpha = 0.38f))
-            drawCloud(Offset(width * 0.45f, height * 0.15f), 1.02f, Color.White.copy(alpha = 0.30f))
+            if (scene.atmosphere != WeatherAtmosphere.Neutral) {
+                drawCloud(
+                    Offset(width * 0.16f, height * 0.22f),
+                    1.24f,
+                    Color.White.copy(alpha = 0.46f),
+                )
+                drawCloud(
+                    Offset(width * 0.74f, height * 0.29f),
+                    1.42f,
+                    Color.White.copy(alpha = 0.38f),
+                )
+                drawCloud(
+                    Offset(width * 0.45f, height * 0.15f),
+                    1.02f,
+                    Color.White.copy(alpha = 0.30f),
+                )
+            }
         }
         WeatherVisualType.Rain -> {
             val isThunderstorm = scene.lightningIntensity != WeatherLightningIntensity.None

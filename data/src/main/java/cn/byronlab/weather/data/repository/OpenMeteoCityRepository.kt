@@ -53,7 +53,7 @@ class OpenMeteoCityRepository @Inject constructor(
         }
 
         val cities = (localCities + remoteResult.getOrDefault(emptyList()))
-            .distinctBy { "${it.geonameId}:${it.latitude}:${it.longitude}" }
+            .distinctBy(OpenMeteoCityCodec::uniqueId)
             .sortedWith(compareByDescending<OpenMeteoCity> { it.population }.thenBy { it.name })
             .take(20)
             .map(OpenMeteoCityCodec::toDomainCity)
@@ -131,7 +131,7 @@ class OpenMeteoCityRepository @Inject constructor(
     private fun citiesFor(cityIds: List<String>): List<City> {
         return cityIds.mapNotNull { cityId ->
             OpenMeteoCityCatalog.resolve(cityId)?.let(OpenMeteoCityCodec::toDomainCity)
-        }
+        }.distinctBy(City::uniqueId)
     }
 
     private fun Throwable?.toDomainError(): DomainError {

@@ -44,6 +44,26 @@ class OpenMeteoCityCodecTest {
     }
 
     @Test
+    fun uniqueIdTreatsLocalizedPayloadVariantsAsTheSameCity() {
+        val catalogCity = OpenMeteoCityCatalog.popularCities.first { it.name == "上海" }
+        val currentLocationCity = OpenMeteoCity(
+            geonameId = "device-location",
+            name = "上海市",
+            nameEn = "上海市",
+            country = "中国",
+            admin1 = "上海市",
+            latitude = 31.2222,
+            longitude = 121.4555,
+            timezone = "auto",
+        )
+
+        assertEquals(
+            OpenMeteoCityCodec.uniqueId(catalogCity),
+            OpenMeteoCityCodec.uniqueId(currentLocationCity),
+        )
+    }
+
+    @Test
     fun searchLocal_matchesChineseAndEnglishNames() {
         val chineseResult = OpenMeteoCityCatalog.searchLocal("北京")
         val englishResult = OpenMeteoCityCatalog.searchLocal("new york")

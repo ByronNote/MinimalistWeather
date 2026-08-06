@@ -137,6 +137,7 @@ data class CityUiModel(
     val cityId: String,
     val name: String,
     val subtitle: String,
+    val uniqueId: String = cityId,
 )
 
 sealed interface HomeUiEvent {

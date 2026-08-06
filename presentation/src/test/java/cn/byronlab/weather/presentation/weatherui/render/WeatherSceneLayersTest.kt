@@ -18,6 +18,15 @@ class WeatherSceneLayersTest {
     @Test
     fun `weather scenes use the expected generated image layers`() {
         assertEquals(
+            emptyList<WeatherSceneAsset>(),
+            weatherSceneLayers(
+                WeatherSceneSpec(
+                    cloudCover = WeatherCloudCover.Overcast,
+                    atmosphere = WeatherAtmosphere.Neutral,
+                ),
+            ).map { it.asset },
+        )
+        assertEquals(
             listOf(WeatherSceneAsset.Sun, WeatherSceneAsset.ThinCloud),
             weatherSceneLayers(WeatherSceneSpec()).map { it.asset },
         )

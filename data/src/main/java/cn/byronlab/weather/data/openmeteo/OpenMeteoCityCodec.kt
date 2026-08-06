@@ -67,7 +67,27 @@ internal object OpenMeteoCityCodec {
             parent = parent,
             longitude = coordinate(city.longitude),
             latitude = coordinate(city.latitude),
+            uniqueId = uniqueId(city),
         )
+    }
+
+    fun uniqueId(cityId: String): String {
+        return decode(cityId)?.let(::uniqueId) ?: "legacy:${cityId.trim()}"
+    }
+
+    fun uniqueId(city: OpenMeteoCity): String {
+        val name = normalizePlacePart(city.name).ifBlank {
+            normalizePlacePart(city.nameEn)
+        }
+        val country = normalizeIdentityPart(city.country)
+        val admin = normalizePlacePart(city.admin1).takeUnless { it == name }.orEmpty()
+        if (name.isNotBlank()) {
+            return "place:$country:$admin:$name"
+        }
+        if (city.geonameId.isNotBlank() && city.geonameId != DEVICE_LOCATION_ID) {
+            return "geoname:${city.geonameId.trim()}"
+        }
+        return "coordinates:${coordinate(city.latitude)}:${coordinate(city.longitude)}"
     }
 
     private fun encodePart(value: String): String {
@@ -81,4 +101,39 @@ internal object OpenMeteoCityCodec {
     private fun coordinate(value: Double): String {
         return String.format(Locale.US, "%.4f", value)
     }
+
+    private fun normalizePlacePart(value: String): String {
+        var normalized = normalizeIdentityPart(value)
+        ADMINISTRATIVE_SUFFIXES.firstOrNull(normalized::endsWith)?.let { suffix ->
+            normalized = normalized.removeSuffix(suffix)
+        }
+        return normalized
+    }
+
+    private fun normalizeIdentityPart(value: String): String {
+        return value
+            .trim()
+            .lowercase(Locale.ROOT)
+            .replace(IDENTITY_SEPARATOR_REGEX, "")
+    }
+
+    private val IDENTITY_SEPARATOR_REGEX = Regex("[\\s·•,，.。'’_\\-/]+")
+    private val ADMINISTRATIVE_SUFFIXES = listOf(
+        "特别行政区",
+        "维吾尔自治区",
+        "壮族自治区",
+        "回族自治区",
+        "自治区",
+        "自治州",
+        "地区",
+        "城市",
+        "city",
+        "省",
+        "州",
+        "市",
+        "县",
+        "区",
+        "盟",
+    )
+    private const val DEVICE_LOCATION_ID = "device-location"
 }

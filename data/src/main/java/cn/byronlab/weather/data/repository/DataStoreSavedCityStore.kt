@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import cn.byronlab.weather.data.di.IoDispatcher
 import cn.byronlab.weather.data.di.SettingsDataStore
+import cn.byronlab.weather.data.openmeteo.OpenMeteoCityCodec
 import cn.byronlab.weather.domain.result.DomainError
 import cn.byronlab.weather.domain.result.DomainResult
 import kotlinx.coroutines.CoroutineDispatcher
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -31,7 +33,10 @@ class DataStoreCityStore @Inject constructor(
     fun observeAddedCityIds(): Flow<DomainResult<List<String>>> {
         return dataStore.data
             .map<Preferences, DomainResult<List<String>>> { preferences ->
-                DomainResult.success(preferences.cityIds(ADDED_CITY_IDS))
+                DomainResult.success(
+                    preferences.cityRecords(ADDED_CITY_RECORDS, LEGACY_ADDED_CITY_IDS)
+                        .map(PersistedCityRef::cityId),
+                )
             }
             .catch { exception ->
                 emit(DomainResult.failure(exception.toStorageError()))
@@ -43,17 +48,31 @@ class DataStoreCityStore @Inject constructor(
         observeAddedCityIds().first()
     }
 
-    suspend fun addCity(cityId: String): DomainResult<Unit> = update(ADDED_CITY_IDS) { cityIds ->
-        if (cityId in cityIds) cityIds else listOf(cityId) + cityIds
+    suspend fun addCity(cityId: String): DomainResult<Unit> =
+        update(ADDED_CITY_RECORDS, LEGACY_ADDED_CITY_IDS) { cities ->
+            val city = cityRef(cityId)
+            if (cities.any { it.uniqueId == city.uniqueId }) {
+                cities.map { existing ->
+                    if (existing.uniqueId == city.uniqueId) city else existing
+                }
+            } else {
+                listOf(city) + cities
+            }
     }
 
-    suspend fun removeCity(cityId: String): DomainResult<Unit> = update(ADDED_CITY_IDS) { cityIds ->
-        cityIds.filterNot { it == cityId }
+    suspend fun removeCity(cityId: String): DomainResult<Unit> =
+        update(ADDED_CITY_RECORDS, LEGACY_ADDED_CITY_IDS) { cities ->
+            val uniqueId = OpenMeteoCityCodec.uniqueId(cityId)
+            cities.filterNot { it.uniqueId == uniqueId }
     }
 
     suspend fun getRecentCityIds(): DomainResult<List<String>> = withContext(ioDispatcher) {
         try {
-            DomainResult.success(dataStore.data.first().cityIds(RECENT_CITY_IDS))
+            DomainResult.success(
+                dataStore.data.first()
+                    .cityRecords(RECENT_CITY_RECORDS, LEGACY_RECENT_CITY_IDS)
+                    .map(PersistedCityRef::cityId),
+            )
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
@@ -61,17 +80,23 @@ class DataStoreCityStore @Inject constructor(
         }
     }
 
-    suspend fun recordRecentCity(cityId: String): DomainResult<Unit> = update(RECENT_CITY_IDS) { cityIds ->
-        (listOf(cityId) + cityIds.filterNot { it == cityId }).take(MAX_RECENT_CITIES)
-    }
+    suspend fun recordRecentCity(cityId: String): DomainResult<Unit> =
+        update(RECENT_CITY_RECORDS, LEGACY_RECENT_CITY_IDS) { cities ->
+            val city = cityRef(cityId)
+            (listOf(city) + cities.filterNot { it.uniqueId == city.uniqueId }).take(MAX_RECENT_CITIES)
+        }
 
     private suspend fun update(
-        key: Preferences.Key<String>,
-        transform: (List<String>) -> List<String>,
+        recordsKey: Preferences.Key<String>,
+        legacyIdsKey: Preferences.Key<String>,
+        transform: (List<PersistedCityRef>) -> List<PersistedCityRef>,
     ): DomainResult<Unit> = withContext(ioDispatcher) {
         try {
             dataStore.edit { preferences ->
-                preferences[key] = Json.encodeToString(transform(preferences.cityIds(key)))
+                preferences[recordsKey] = Json.encodeToString(
+                    transform(preferences.cityRecords(recordsKey, legacyIdsKey)),
+                )
+                preferences.remove(legacyIdsKey)
             }
             DomainResult.success(Unit)
         } catch (exception: CancellationException) {
@@ -81,15 +106,47 @@ class DataStoreCityStore @Inject constructor(
         }
     }
 
-    private fun Preferences.cityIds(key: Preferences.Key<String>): List<String> {
-        val encoded = this[key].orEmpty()
-        if (encoded.isBlank()) {
-            return emptyList()
+    private fun Preferences.cityRecords(
+        recordsKey: Preferences.Key<String>,
+        legacyIdsKey: Preferences.Key<String>,
+    ): List<PersistedCityRef> {
+        val records = this[recordsKey].orEmpty()
+        if (records.isNotBlank()) {
+            return Json.decodeFromString<List<PersistedCityRef>>(records)
+                .mapNotNull { record ->
+                    val cityId = record.cityId.trim()
+                    if (cityId.isEmpty()) {
+                        null
+                    } else {
+                        PersistedCityRef(
+                            uniqueId = record.uniqueId.trim().ifBlank {
+                                OpenMeteoCityCodec.uniqueId(cityId)
+                            },
+                            cityId = cityId,
+                        )
+                    }
+                }
+                .distinctBy(PersistedCityRef::uniqueId)
         }
+        return legacyCityIds(legacyIdsKey)
+            .map(::cityRef)
+            .distinctBy(PersistedCityRef::uniqueId)
+    }
+
+    private fun Preferences.legacyCityIds(key: Preferences.Key<String>): List<String> {
+        val encoded = this[key].orEmpty()
+        if (encoded.isBlank()) return emptyList()
         return Json.decodeFromString<List<String>>(encoded)
             .map(String::trim)
             .filter(String::isNotEmpty)
             .distinct()
+    }
+
+    private fun cityRef(cityId: String): PersistedCityRef {
+        return PersistedCityRef(
+            uniqueId = OpenMeteoCityCodec.uniqueId(cityId),
+            cityId = cityId,
+        )
     }
 
     private fun Throwable.toStorageError(): DomainError {
@@ -101,9 +158,17 @@ class DataStoreCityStore @Inject constructor(
     }
 
     companion object {
-        // Keep the legacy preference key so existing users retain their city list.
-        private val ADDED_CITY_IDS = stringPreferencesKey("saved_city_ids")
-        private val RECENT_CITY_IDS = stringPreferencesKey("recent_city_ids")
+        private val ADDED_CITY_RECORDS = stringPreferencesKey("added_city_records_v2")
+        private val RECENT_CITY_RECORDS = stringPreferencesKey("recent_city_records_v2")
+        // Read old ID-only lists once and migrate them on the next write.
+        private val LEGACY_ADDED_CITY_IDS = stringPreferencesKey("saved_city_ids")
+        private val LEGACY_RECENT_CITY_IDS = stringPreferencesKey("recent_city_ids")
         private const val MAX_RECENT_CITIES = 9
     }
 }
+
+@Serializable
+internal data class PersistedCityRef(
+    val uniqueId: String,
+    val cityId: String,
+)

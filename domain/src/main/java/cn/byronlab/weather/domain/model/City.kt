@@ -8,4 +8,5 @@ data class City(
     val parent: String,
     val longitude: String,
     val latitude: String,
+    val uniqueId: String = cityId,
 )

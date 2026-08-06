@@ -16,6 +16,7 @@ import cn.byronlab.weather.presentation.weatherui.model.WeatherPrecipitation
 import cn.byronlab.weather.presentation.weatherui.model.WeatherPrecipitationPattern
 import cn.byronlab.weather.presentation.weatherui.model.WeatherSceneSpec
 import cn.byronlab.weather.presentation.weatherui.model.WeatherSkyPhase
+import cn.byronlab.weather.presentation.weatherui.model.FallbackWeatherScene
 import cn.byronlab.weather.presentation.weatherui.model.WeatherWindLevel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -237,7 +238,7 @@ class WeatherUiMapperTest {
         assertEquals("主要污染物: --", uiModel.cityRank)
         assertEquals("", uiModel.primaryPollutant)
         assertTrue(uiModel.pollutants.all { it.value == "--" })
-        assertEquals(WeatherSceneSpec(), uiModel.scene)
+        assertEquals(FallbackWeatherScene, uiModel.scene)
         assertEquals("--", uiModel.todaySummary.high)
         assertTrue(uiModel.hourlyForecasts.isEmpty())
         assertTrue(uiModel.forecasts.isEmpty())

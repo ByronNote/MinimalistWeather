@@ -135,6 +135,7 @@ import cn.byronlab.weather.presentation.weatherui.icons.weatherConditionIconTint
 import cn.byronlab.weather.presentation.weatherui.model.WeatherCloudCover
 import cn.byronlab.weather.presentation.weatherui.model.WeatherIntensity
 import cn.byronlab.weather.presentation.weatherui.model.WeatherPrecipitation
+import cn.byronlab.weather.presentation.weatherui.model.FallbackWeatherScene
 import cn.byronlab.weather.presentation.weatherui.model.WeatherSceneSpec
 import cn.byronlab.weather.presentation.weatherui.render.WeatherScene
 import cn.byronlab.weather.presentation.weatherui.render.drawWeatherThumbnailScene
@@ -450,7 +451,7 @@ private fun HomeScreen(
                         searching = state.search.searching,
                         recentCities = state.recentCities,
                         popularCities = state.popularCities,
-                        addedCityIds = state.addedCities.mapTo(mutableSetOf()) { it.cityId },
+                        addedCityUniqueIds = state.addedCities.mapTo(mutableSetOf()) { it.uniqueId },
                         onPopularCityClick = { onShowcaseCityClick(it, onEvent) },
                         onAllPopularCitiesClick = {
                             onEvent(HomeUiEvent.TabSelected(HomeTab.HotCities))
@@ -486,7 +487,7 @@ private fun HomeWeatherTab(
         activeWeatherUiTestScenario?.let(WeatherUiTestCatalog::createPreview)
     }
     val weather = testWeather ?: state.weather
-    val scene = weather?.scene ?: WeatherSceneSpec()
+    val scene = weather?.scene ?: FallbackWeatherScene
     val style = weatherVisualStyle(scene)
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1645,6 +1646,7 @@ private fun DetailTile(
     style: WeatherVisualStyle,
     modifier: Modifier = Modifier,
 ) {
+    val isWindCard = detail.title == "风速" && detail.subtitle.isNotBlank()
     Surface(
         modifier = modifier.height(124.dp),
         shape = RoundedCornerShape(14.dp),
@@ -1667,14 +1669,42 @@ private fun DetailTile(
                 tint = detailIconTint(detail.title, style),
             )
             Spacer(modifier = Modifier.height(7.dp))
-            Text(
-                text = detail.title,
-                style = MaterialTheme.typography.labelMedium,
-                color = style.panelContent.copy(alpha = 0.72f),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            if (isWindCard) {
+                Text(
+                    text = detail.subtitle,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = style.panelContent.copy(alpha = 0.62f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                Text(
+                    text = detail.title,
+                    style = if (detail.title == "风速") {
+                        MaterialTheme.typography.labelSmall
+                    } else {
+                        MaterialTheme.typography.labelMedium
+                    },
+                    color = style.panelContent.copy(alpha = 0.72f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
+                if (detail.subtitle.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = detail.subtitle,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = style.panelContent.copy(alpha = 0.62f),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Spacer(modifier = if (isWindCard || detail.subtitle.isNotBlank()) Modifier.height(6.dp) else Modifier.height(8.dp))
             Text(
                 text = detail.value,
                 modifier = Modifier.fillMaxWidth(),
@@ -1685,17 +1715,6 @@ private fun DetailTile(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (detail.subtitle.isNotBlank()) {
-                Text(
-                    text = detail.subtitle,
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = style.panelContent.copy(alpha = 0.62f),
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
         }
     }
 }
@@ -1882,7 +1901,7 @@ private fun CurrentLocationCard(
         cityName = cityName,
         subtitle = subtitle,
         temperature = locationWeather?.currentTemperature?.toTemperatureText() ?: "--",
-        scene = locationWeather?.scene ?: WeatherSceneSpec(),
+                scene = locationWeather?.scene ?: FallbackWeatherScene,
         selected = true,
         onClick = onClick,
     )
@@ -1934,7 +1953,7 @@ private fun AddedCityListItem(
     onClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
-    val scene = weather?.scene ?: WeatherSceneSpec()
+    val scene = weather?.scene ?: FallbackWeatherScene
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -2457,20 +2476,39 @@ private fun HotCityGridCard(
             .height(112.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = Color.Transparent,
         border = BorderStroke(1.dp, LightScreenBorder),
         shadowElevation = 1.dp,
     ) {
-        Column(
+        Box(
             modifier = Modifier.fillMaxSize(),
         ) {
-            CityLandmarkGridImage(city = city)
+            CityLandmarkGridImage(
+                city = city,
+                modifier = Modifier.fillMaxSize(),
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0f to Color.Transparent,
+                                0.52f to Color.Transparent,
+                                0.78f to Color.Black.copy(alpha = 0.28f),
+                                1f to Color.Black.copy(alpha = 0.58f),
+                            ),
+                        ),
+                    ),
+            )
             Column(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 10.dp, vertical = 9.dp),
             ) {
                 Text(
                     text = city.name,
-                    color = Color(0xFF0F172A),
+                    color = Color.White,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -2478,7 +2516,7 @@ private fun HotCityGridCard(
                 )
                 Text(
                     text = city.country,
-                    color = Color(0xFF64748B),
+                    color = Color.White.copy(alpha = 0.84f),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -2489,13 +2527,14 @@ private fun HotCityGridCard(
 }
 
 @Composable
-private fun CityLandmarkGridImage(city: ShowcaseCity) {
+private fun CityLandmarkGridImage(
+    city: ShowcaseCity,
+    modifier: Modifier = Modifier,
+) {
     val style = weatherVisualStyle(city.scene)
     val landmarkImageRes = hotCityThumbnailImageForCity(city.name)
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(58.dp)
+        modifier = modifier
             .background(Brush.verticalGradient(style.backgroundColors)),
         contentAlignment = Alignment.Center,
     ) {
@@ -2524,7 +2563,7 @@ private fun SearchCityScreen(
     searching: Boolean,
     recentCities: List<CityUiModel>,
     popularCities: List<CityUiModel>,
-    addedCityIds: Set<String>,
+    addedCityUniqueIds: Set<String>,
     onPopularCityClick: (ShowcaseCity) -> Unit,
     onAllPopularCitiesClick: () -> Unit,
     onQueryChange: (String) -> Unit,
@@ -2625,7 +2664,7 @@ private fun SearchCityScreen(
                     item {
                         SearchHistoryGrid(
                             cities = recentCities,
-                            addedCityIds = addedCityIds,
+                            addedCityUniqueIds = addedCityUniqueIds,
                             onCityClick = onCityClick,
                         )
                     }
@@ -2705,7 +2744,7 @@ private fun SearchCityScreen(
                 items(results, key = { it.cityId }) { city ->
                     SearchResultRow(
                         city = city,
-                        isAdded = city.cityId in addedCityIds,
+                        isAdded = city.uniqueId in addedCityUniqueIds,
                         onClick = { onCityClick(city.cityId) },
                     )
                 }
@@ -2739,7 +2778,7 @@ private fun CarouselEdgeFade(
 @Composable
 private fun SearchHistoryGrid(
     cities: List<CityUiModel>,
-    addedCityIds: Set<String>,
+    addedCityUniqueIds: Set<String>,
     onCityClick: (String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2748,7 +2787,7 @@ private fun SearchHistoryGrid(
                 rowCities.forEach { city ->
                     SearchHistoryCard(
                         city = city,
-                        isAdded = city.cityId in addedCityIds,
+                        isAdded = city.uniqueId in addedCityUniqueIds,
                         onClick = { onCityClick(city.cityId) },
                         modifier = Modifier.weight(1f),
                     )
