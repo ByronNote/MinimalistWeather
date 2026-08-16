@@ -18,4 +18,4 @@ dependencyResolutionManagement {
     }
 }
 
-include ':app', ':presentation', ':data', ':domain'
+include ':app', ':presentation', ':data', ':domain', ':baselineprofile'

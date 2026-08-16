@@ -13,10 +13,8 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 class WorkManagerWeatherRefreshScheduler @Inject constructor(
-    @ApplicationContext context: Context,
+    @param:ApplicationContext private val context: Context,
 ) : WeatherRefreshScheduler {
-
-    private val workManager = WorkManager.getInstance(context)
 
     override fun schedule(interval: WeatherRefreshInterval) {
         val request = PeriodicWorkRequestBuilder<WeatherRefreshWorker>(
@@ -30,7 +28,7 @@ class WorkManagerWeatherRefreshScheduler @Inject constructor(
             )
             .addTag(WEATHER_REFRESH_WORK_TAG)
             .build()
-        workManager.enqueueUniquePeriodicWork(
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             UNIQUE_WEATHER_REFRESH_WORK,
             ExistingPeriodicWorkPolicy.UPDATE,
             request,

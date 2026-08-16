@@ -38,12 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import cn.byronlab.weather.presentation.weatherui.icons.weatherConditionIcon
-import cn.byronlab.weather.presentation.weatherui.model.WeatherAtmosphere
-import cn.byronlab.weather.presentation.weatherui.model.WeatherCloudCover
-import cn.byronlab.weather.presentation.weatherui.model.WeatherLightningIntensity
-import cn.byronlab.weather.presentation.weatherui.model.WeatherPrecipitation
-import cn.byronlab.weather.presentation.weatherui.model.WeatherSceneSpec
+import cn.byronlab.weather.presentation.weatherui.icons.WeatherConditionIcon
 import cn.byronlab.weather.presentation.weatherui.tokens.WeatherVisualStyle
 
 @Composable
@@ -257,11 +252,9 @@ private fun WeatherUiTestScenarioRow(
                     .background(Color.White, RoundedCornerShape(11.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = weatherConditionIcon(weather.scene),
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                    tint = testWeatherIconTint(weather.scene),
+                WeatherConditionIcon(
+                    scene = weather.scene,
+                    modifier = Modifier.size(26.dp),
                 )
             }
             Spacer(modifier = Modifier.width(11.dp))
@@ -291,15 +284,3 @@ private fun WeatherUiTestScenarioRow(
         }
     }
 }
-
-private fun testWeatherIconTint(scene: WeatherSceneSpec): Color = when {
-    scene.precipitation == WeatherPrecipitation.Snow -> Color(0xFF63A7EA)
-    scene.precipitation != WeatherPrecipitation.None ||
-        scene.lightningIntensity != WeatherLightningIntensity.None -> Color(0xFF398AD7)
-    scene.atmosphere == WeatherAtmosphere.Fog || scene.cloudCover != WeatherCloudCover.Clear -> Color(0xFF8395AA)
-    scene.isDay -> Color(0xFFFFA63D)
-    else -> Color(0xFF647CCB)
-}
-
-private val WeatherSceneSpec.isDay: Boolean
-    get() = skyPhase == cn.byronlab.weather.presentation.weatherui.model.WeatherSkyPhase.Day

@@ -1,6 +1,6 @@
 # 现代化 Clean Architecture 迁移计划
 
-最后更新：2026-08-05
+最后更新：2026-08-14
 
 ## 目标
 
@@ -34,6 +34,7 @@ active app 当前使用：
 - `:domain` 独立纯 Kotlin/JVM 模块
 - `:data` 独立 Android library 模块
 - `:presentation` 独立 Android library 模块
+- `:baselineprofile` 独立性能测试模块，生成 Baseline Profile / Startup Profile 并提供冷启动 Macrobenchmark
 - `:app -> :presentation -> :domain`、`:app -> :data -> :domain` 与 `:app -> :domain` 的 active 依赖方向
 - `:app` 仅保留 Application、Activity、依赖装配和 Android 资源入口
 - 插件、依赖和 Android SDK/应用版本已集中到 Gradle Version Catalog
@@ -41,6 +42,16 @@ active app 当前使用：
 - Open-Meteo Geocoding + Forecast + Air Quality
 - 内置 Kotlin 全球热门城市列表
 - 旧 XML/MVP 用户界面、旧 Dagger component、ButterKnife、SmartRefresh、旧 RecyclerView helper、旧状态栏 helper、`widget` 模块已移除
+
+2026-08-14 启动性能优化结果：
+
+- 移除启动闪屏额外的 280ms 退出缩放/淡出动画，保留 Android 12+ SplashScreen 的系统退出行为。
+- `OpenMeteoWeatherRepository` 的缓存读取、Kotlinx Serialization 解析和天气映射统一切到 IO dispatcher，避免在主线程解析天气 JSON。
+- 热门城市和最近城市与首屏天气并发读取；后台刷新调度与已添加城市天气等待首屏天气结束，其中当前城市复用首屏结果，避免缓存重复解析。
+- WorkManager 改为按需初始化，Hilt 构造后台刷新调度器时不再提前创建 WorkManager。
+- 新增 `:baselineprofile` 模块，通过 `BaselineProfileRule` 采集真实启动路径，并用 `StartupTimingMetric` 对比无编译和 Baseline Profile 冷启动。
+- release 开启 R8 压缩优化，生成的 Startup Profile 可参与 DEX 布局，Baseline Profile 以 `assets/dexopt/baseline.prof` 打包。
+- Pixel 10 Pro XL API 37 模拟器的 Macrobenchmark 波动较大，当前结果不足以证明 Baseline Profile 的相对收益；发布前应在固定状态的真机上复测，不使用模拟器结果外推用户设备。
 
 当前 data 状态：
 

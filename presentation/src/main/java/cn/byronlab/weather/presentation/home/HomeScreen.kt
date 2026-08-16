@@ -55,7 +55,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Air
-import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DarkMode
@@ -67,14 +66,9 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Thermostat
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -130,13 +124,19 @@ import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cn.byronlab.weather.domain.model.WeatherRefreshInterval
 import cn.byronlab.weather.presentation.R
-import cn.byronlab.weather.presentation.weatherui.icons.weatherConditionIcon
-import cn.byronlab.weather.presentation.weatherui.icons.weatherConditionIconTint
+import cn.byronlab.weather.presentation.weatherui.icons.WeatherConditionIcon
+import cn.byronlab.weather.presentation.weatherui.icons.WeatherMetricIcon
+import cn.byronlab.weather.presentation.weatherui.icons.WeatherMetricIconType
+import cn.byronlab.weather.presentation.weatherui.icons.weatherDetailIconType
 import cn.byronlab.weather.presentation.weatherui.model.WeatherCloudCover
 import cn.byronlab.weather.presentation.weatherui.model.WeatherIntensity
 import cn.byronlab.weather.presentation.weatherui.model.WeatherPrecipitation
 import cn.byronlab.weather.presentation.weatherui.model.FallbackWeatherScene
 import cn.byronlab.weather.presentation.weatherui.model.WeatherSceneSpec
+import cn.byronlab.weather.presentation.weatherui.render.WeatherCardRainImpact
+import cn.byronlab.weather.presentation.weatherui.render.WeatherCardSnowImpact
+import cn.byronlab.weather.presentation.weatherui.render.WeatherRainForeground
+import cn.byronlab.weather.presentation.weatherui.render.WeatherSnowForeground
 import cn.byronlab.weather.presentation.weatherui.render.WeatherScene
 import cn.byronlab.weather.presentation.weatherui.render.drawWeatherThumbnailScene
 import cn.byronlab.weather.presentation.weatherui.tokens.WeatherVisualStyle
@@ -508,7 +508,20 @@ private fun HomeWeatherTab(
             )
         } else when (val loadState = state.weatherState) {
             WeatherLoadState.Initializing,
-            WeatherLoadState.Loading -> WeatherLoading(style = style)
+            WeatherLoadState.Loading -> {
+                if (weather != null) {
+                    WeatherDashboard(
+                        weather = weather,
+                        refreshing = true,
+                        style = style,
+                        previewMode = state.cityPreview != null,
+                        weatherUiTestMode = false,
+                        onMenu = { onEvent(HomeUiEvent.TabSelected(HomeTab.Settings)) },
+                        onLocation = { onEvent(HomeUiEvent.TabSelected(HomeTab.Cities)) },
+                        onSearch = { onEvent(HomeUiEvent.TabSelected(HomeTab.Cities)) },
+                    )
+                }
+            }
 
             is WeatherLoadState.Empty -> EmptyWeather(
                 message = loadState.message,
@@ -537,6 +550,14 @@ private fun HomeWeatherTab(
                 }
             }
         }
+        WeatherRainForeground(
+            scene = scene,
+            modifier = Modifier.fillMaxSize(),
+        )
+        WeatherSnowForeground(
+            scene = scene,
+            modifier = Modifier.fillMaxSize(),
+        )
         if (state.cityPreview != null) {
             CityPreviewControls(
                 style = style,
@@ -998,7 +1019,7 @@ private fun TodaySummaryPanel(
     weather: WeatherUiModel,
     style: WeatherVisualStyle,
 ) {
-    WeatherPanel(style = style) {
+    WeatherPanel(style = style, precipitationImpactScene = weather.scene) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 13.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -1061,24 +1082,24 @@ private fun SummaryMetric(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             when (icon) {
-                SummaryMetricIcon.High -> Icon(
-                    imageVector = Icons.Default.Thermostat,
-                    contentDescription = null,
-                    modifier = Modifier.size(17.dp),
+                SummaryMetricIcon.High -> WeatherMetricIcon(
+                    type = WeatherMetricIconType.HighTemperature,
+                    modifier = Modifier.size(19.dp),
                     tint = tint.copy(alpha = 0.92f),
                 )
-                SummaryMetricIcon.Low -> Icon(
-                    imageVector = Icons.Default.ArrowDownward,
-                    contentDescription = null,
-                    modifier = Modifier.size(17.dp),
+                SummaryMetricIcon.Low -> WeatherMetricIcon(
+                    type = WeatherMetricIconType.LowTemperature,
+                    modifier = Modifier.size(19.dp),
                     tint = tint.copy(alpha = 0.92f),
                 )
-                SummaryMetricIcon.Sunrise -> SunEventIcon(
-                    rising = true,
+                SummaryMetricIcon.Sunrise -> WeatherMetricIcon(
+                    type = WeatherMetricIconType.Sunrise,
+                    modifier = Modifier.size(19.dp),
                     tint = tint.copy(alpha = 0.92f),
                 )
-                SummaryMetricIcon.Sunset -> SunEventIcon(
-                    rising = false,
+                SummaryMetricIcon.Sunset -> WeatherMetricIcon(
+                    type = WeatherMetricIconType.Sunset,
+                    modifier = Modifier.size(19.dp),
                     tint = tint.copy(alpha = 0.92f),
                 )
             }
@@ -1099,60 +1120,6 @@ private fun SummaryMetric(
             color = style.panelContent.copy(alpha = 0.82f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun SunEventIcon(
-    rising: Boolean,
-    tint: Color,
-) {
-    Canvas(modifier = Modifier.size(19.dp)) {
-        val strokeWidth = 1.55.dp.toPx()
-        val horizonY = size.height * 0.68f
-        val centerX = size.width * 0.45f
-        val sunRadius = size.width * 0.19f
-        drawArc(
-            color = tint,
-            startAngle = 180f,
-            sweepAngle = 180f,
-            useCenter = false,
-            topLeft = Offset(centerX - sunRadius, horizonY - sunRadius),
-            size = Size(sunRadius * 2f, sunRadius * 2f),
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-        )
-        drawLine(
-            color = tint,
-            start = Offset(size.width * 0.08f, horizonY),
-            end = Offset(size.width * 0.82f, horizonY),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
-        )
-        val arrowX = size.width * 0.82f
-        val arrowStartY = if (rising) size.height * 0.60f else size.height * 0.24f
-        val arrowEndY = if (rising) size.height * 0.24f else size.height * 0.60f
-        drawLine(
-            color = tint,
-            start = Offset(arrowX, arrowStartY),
-            end = Offset(arrowX, arrowEndY),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
-        )
-        val arrowDirection = if (rising) 1f else -1f
-        drawLine(
-            color = tint,
-            start = Offset(arrowX, arrowEndY),
-            end = Offset(arrowX - size.width * 0.10f, arrowEndY + size.height * 0.10f * arrowDirection),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
-        )
-        drawLine(
-            color = tint,
-            start = Offset(arrowX, arrowEndY),
-            end = Offset(arrowX + size.width * 0.10f, arrowEndY + size.height * 0.10f * arrowDirection),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
         )
     }
 }
@@ -1239,11 +1206,9 @@ private fun HourlyForecastItem(
             maxLines = 1,
         )
         Spacer(modifier = Modifier.height(6.dp))
-        Icon(
-            imageVector = weatherConditionIcon(forecast.scene),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = weatherConditionIconTint(forecast.scene, style),
+        WeatherConditionIcon(
+            scene = forecast.scene,
+            modifier = Modifier.size(27.dp),
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
@@ -1351,11 +1316,9 @@ private fun DailyForecastRow(
             color = style.panelContent,
             fontWeight = if (isToday) FontWeight.SemiBold else FontWeight.Normal,
         )
-        Icon(
-            imageVector = weatherConditionIcon(forecast.scene),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = weatherConditionIconTint(forecast.scene, style),
+        WeatherConditionIcon(
+            scene = forecast.scene,
+            modifier = Modifier.size(26.dp),
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
@@ -1662,10 +1625,9 @@ private fun DetailTile(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Icon(
-                imageVector = detailIcon(detail.title),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
+            WeatherMetricIcon(
+                type = weatherDetailIconType(detail.title),
+                modifier = Modifier.size(27.dp),
                 tint = detailIconTint(detail.title, style),
             )
             Spacer(modifier = Modifier.height(7.dp))
@@ -2003,16 +1965,19 @@ private fun AddedCityListItem(
             }
             Spacer(modifier = Modifier.height(7.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = if (weather == null) Icons.Default.Schedule else weatherConditionIcon(scene),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = if (weather == null) {
-                        LightScreenMuted
-                    } else {
-                        weatherConditionIconTint(scene, weatherVisualStyle(scene))
-                    },
-                )
+                if (weather == null) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = LightScreenMuted,
+                    )
+                } else {
+                    WeatherConditionIcon(
+                        scene = scene,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = weather?.currentCondition?.ifBlank { "天气数据加载中" }
@@ -2123,11 +2088,9 @@ private fun LocationWeatherRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Icon(
-                imageVector = weatherConditionIcon(scene),
-                contentDescription = null,
-                modifier = Modifier.size(22.dp),
-                tint = weatherConditionIconTint(scene, weatherVisualStyle(scene)),
+            WeatherConditionIcon(
+                scene = scene,
+                modifier = Modifier.size(24.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -2284,11 +2247,9 @@ private fun FeaturedCityCard(
                     )
                 }
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Icon(
-                        imageVector = weatherConditionIcon(city.scene),
-                        contentDescription = null,
-                        tint = weatherConditionIconTint(city.scene, style),
-                        modifier = Modifier.size(26.dp),
+                    WeatherConditionIcon(
+                        scene = city.scene,
+                        modifier = Modifier.size(30.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
@@ -2546,11 +2507,9 @@ private fun CityLandmarkGridImage(
                 contentScale = ContentScale.Crop,
             )
         } else {
-            Icon(
-                imageVector = weatherConditionIcon(city.scene),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = weatherConditionIconTint(city.scene, style),
+            WeatherConditionIcon(
+                scene = city.scene,
+                modifier = Modifier.size(27.dp),
             )
         }
     }
@@ -3524,27 +3483,6 @@ private fun SettingsDivider() {
 }
 
 @Composable
-private fun WeatherLoading(style: WeatherVisualStyle) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(color = style.content)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "天气加载中",
-                color = style.content.copy(alpha = 0.86f),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-}
-
-@Composable
 private fun EmptyWeather(
     message: String,
     style: WeatherVisualStyle,
@@ -3558,11 +3496,9 @@ private fun EmptyWeather(
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.WbSunny,
-                contentDescription = null,
+            WeatherConditionIcon(
+                scene = WeatherSceneSpec(),
                 modifier = Modifier.size(72.dp),
-                tint = style.heroIcon,
             )
             Spacer(modifier = Modifier.height(18.dp))
             Text(
@@ -3584,28 +3520,39 @@ private fun EmptyWeather(
 @Composable
 private fun WeatherPanel(
     style: WeatherVisualStyle,
+    precipitationImpactScene: WeatherSceneSpec? = null,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = style.panelColor.copy(alpha = style.panelColor.alpha * 0.84f),
-        contentColor = style.panelContent,
-        shadowElevation = 0.dp,
-        tonalElevation = 0.dp,
-        content = content,
-    )
-}
-
-private fun detailIcon(title: String): ImageVector {
-    return when (title) {
-        "体感温度" -> Icons.Default.Thermostat
-        "风速" -> Icons.Default.Air
-        "湿度" -> Icons.Default.WaterDrop
-        "气压" -> Icons.Default.Speed
-        "能见度" -> Icons.Default.Visibility
-        else -> Icons.Default.WbSunny
+    val panelCornerRadius = 18.dp
+    Box(modifier = modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(panelCornerRadius),
+            color = style.panelColor.copy(alpha = style.panelColor.alpha * 0.84f),
+            contentColor = style.panelContent,
+            shadowElevation = 0.dp,
+            tonalElevation = 0.dp,
+            content = content,
+        )
+        if (precipitationImpactScene != null) {
+            WeatherCardRainImpact(
+                scene = precipitationImpactScene,
+                edgeInset = 12.dp,
+                cornerRadius = panelCornerRadius,
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(y = (-12).dp),
+            )
+            WeatherCardSnowImpact(
+                scene = precipitationImpactScene,
+                edgeInset = 12.dp,
+                cornerRadius = panelCornerRadius,
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(y = (-12).dp),
+            )
+        }
     }
 }
 

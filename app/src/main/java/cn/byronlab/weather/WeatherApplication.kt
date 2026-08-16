@@ -2,10 +2,14 @@ package cn.byronlab.weather
 
 import android.app.Application
 import android.os.StrictMode
+import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
-class WeatherApplication : Application() {
+class WeatherApplication : Application(), Configuration.Provider {
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().build()
 
     override fun onCreate() {
         super.onCreate()

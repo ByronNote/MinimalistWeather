@@ -1,0 +1,26 @@
+plugins {
+    alias(libs.plugins.android.test)
+    alias(libs.plugins.androidx.baselineprofile)
+}
+
+android {
+    namespace = "cn.byronlab.weather.baselineprofile"
+    compileSdk libs.versions.compileSdk.get().toInteger()
+
+    defaultConfig {
+        minSdk libs.versions.minSdk.get().toInteger()
+        targetSdk libs.versions.targetSdk.get().toInteger()
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    targetProjectPath = ":app"
+}
+
+baselineProfile {
+    useConnectedDevices = true
+}
+
+dependencies {
+    implementation(libs.androidx.benchmark.macro.junit4)
+    implementation(libs.androidx.test.ext.junit)
+}

@@ -148,11 +148,16 @@ class HomeViewModel @Inject constructor(
                 }
                 is DomainResult.Success -> Unit
             }
-            configureWeatherRefresh()
-            observeAddedCities()
-            loadPopularCities()
-            loadRecentCities()
-            loadWeatherInCurrentJob(cityId = null, refresh = false)
+            supervisorScope {
+                val cityListJobs = listOf(
+                    async { loadPopularCities() },
+                    async { loadRecentCities() },
+                )
+                loadWeatherInCurrentJob(cityId = null, refresh = false)
+                observeAddedCities()
+                configureWeatherRefresh()
+                cityListJobs.awaitAll()
+            }
         }
     }
 
@@ -347,12 +352,22 @@ class HomeViewModel @Inject constructor(
                 val cities = result.data
                 val cityIds = cities.mapTo(mutableSetOf(), City::cityId)
                 _uiState.update {
+                    val currentWeather = it.weather?.takeIf { weather -> weather.cityId in cityIds }
                     it.copy(
                         addedCities = cities.toCityUiModels(),
-                        addedCityWeather = it.addedCityWeather.filterKeys(cityIds::contains),
+                        addedCityWeather = it.addedCityWeather
+                            .filterKeys(cityIds::contains)
+                            .let { weatherByCityId ->
+                                if (currentWeather == null) {
+                                    weatherByCityId
+                                } else {
+                                    weatherByCityId + (currentWeather.cityId to currentWeather)
+                                }
+                            },
                     )
                 }
-                loadAddedCityWeather(cities)
+                val loadedCityIds = _uiState.value.addedCityWeather.keys
+                loadAddedCityWeather(cities.filterNot { it.cityId in loadedCityIds })
             }
         }
     }

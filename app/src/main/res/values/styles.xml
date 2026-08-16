@@ -6,4 +6,11 @@
         <item name="android:navigationBarColor">@android:color/white</item>
         <item name="android:statusBarColor">@color/colorPrimary</item>
     </style>
+
+    <style name="AppTheme.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_mark</item>
+        <item name="windowSplashScreenAnimationDuration">280</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
+    </style>
 </resources>

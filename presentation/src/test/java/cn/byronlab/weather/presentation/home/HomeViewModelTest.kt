@@ -61,6 +61,24 @@ class HomeViewModelTest {
         assertEquals(listOf("北京"), state.addedCities.map { it.name })
         assertEquals("26", state.addedCityWeather["101010100"]?.currentTemperature)
         assertEquals(listOf("上海", "伦敦"), state.popularCities.map { it.name })
+        assertEquals(1, fixture.weatherRepository.loadCallCountByCityId["101010100"])
+    }
+
+    @Test
+    fun cityListsLoadWhileInitialWeatherIsPending() = runTest(mainDispatcherRule.testDispatcher) {
+        val fixture = Fixture()
+        val weatherGate = CompletableDeferred<Unit>()
+        fixture.weatherRepository.nextLoadGate = weatherGate
+
+        val viewModel = fixture.viewModel()
+        runCurrent()
+
+        assertEquals(listOf("上海", "伦敦"), viewModel.uiState.value.popularCities.map { it.name })
+        assertTrue(viewModel.uiState.value.weatherState is WeatherLoadState.Loading)
+
+        weatherGate.complete(Unit)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.weatherState is WeatherLoadState.Content)
     }
 
     @Test
@@ -314,8 +332,10 @@ class HomeViewModelTest {
     private class FakeWeatherRepository : WeatherRepository {
         var refreshCallCount: Int = 0
         var nextLoadGate: CompletableDeferred<Unit>? = null
+        val loadCallCountByCityId = mutableMapOf<String, Int>()
 
         override suspend fun getWeather(cityId: String, refreshNow: Boolean): DomainResult<Weather> {
+            loadCallCountByCityId[cityId] = loadCallCountByCityId.getOrDefault(cityId, 0) + 1
             nextLoadGate?.let { gate ->
                 nextLoadGate = null
                 gate.await()

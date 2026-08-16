@@ -25,16 +25,19 @@ class OpenMeteoWeatherRepository @Inject constructor(
     private val parser = OpenMeteoJsonParser()
     private val mapper = OpenMeteoWeatherMapper()
 
-    override suspend fun getWeather(cityId: String, refreshNow: Boolean): DomainResult<Weather> {
+    override suspend fun getWeather(
+        cityId: String,
+        refreshNow: Boolean,
+    ): DomainResult<Weather> = withContext(ioDispatcher) {
         if (refreshNow) {
-            return loadRemoteWeather(cityId)
+            return@withContext loadRemoteWeather(cityId)
         }
         val city = OpenMeteoCityCatalog.resolve(cityId)
-            ?: return DomainResult.failure(DomainError.invalidInput("Unsupported Open-Meteo city id."))
+            ?: return@withContext DomainResult.failure(DomainError.invalidInput("Unsupported Open-Meteo city id."))
         val cachedPayload = cache.read(cityId)
         if (cachedPayload != null) {
             try {
-                return DomainResult.success(
+                return@withContext DomainResult.success(
                     mapper.map(
                         city = city,
                         forecast = parser.parseForecast(cachedPayload.forecastPayload),
@@ -45,16 +48,18 @@ class OpenMeteoWeatherRepository @Inject constructor(
                 cache.clear(cityId)
             }
         }
-        return loadRemoteWeather(cityId)
+        loadRemoteWeather(cityId)
     }
 
-    override suspend fun refreshWeather(cityId: String): DomainResult<Weather> = loadRemoteWeather(cityId)
+    override suspend fun refreshWeather(cityId: String): DomainResult<Weather> = withContext(ioDispatcher) {
+        loadRemoteWeather(cityId)
+    }
 
-    private suspend fun loadRemoteWeather(cityId: String): DomainResult<Weather> = withContext(ioDispatcher) {
+    private suspend fun loadRemoteWeather(cityId: String): DomainResult<Weather> {
         val city = OpenMeteoCityCatalog.resolve(cityId)
-            ?: return@withContext DomainResult.failure(DomainError.invalidInput("Unsupported Open-Meteo city id."))
+            ?: return DomainResult.failure(DomainError.invalidInput("Unsupported Open-Meteo city id."))
 
-        try {
+        return try {
             val forecastPayload = client.getForecast(city)
             val airQualityPayload = client.getAirQuality(city)
             val weather = mapper.map(

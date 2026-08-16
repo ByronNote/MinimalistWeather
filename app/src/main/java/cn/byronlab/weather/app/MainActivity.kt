@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import cn.byronlab.weather.BuildConfig
 import cn.byronlab.weather.presentation.home.HomeScreen
 import cn.byronlab.weather.presentation.home.HomeUiEvent
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
     private val transparent = android.graphics.Color.TRANSPARENT
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         updateSystemBars(useDarkStatusBarIcons = false)
         setContent {
